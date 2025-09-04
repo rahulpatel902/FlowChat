@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from decouple import config
+import uuid
 
 User = get_user_model()
 
@@ -11,18 +12,30 @@ class Command(BaseCommand):
         email = config('SUPERUSER_EMAIL', default='admin@flowchat.com')
         password = config('SUPERUSER_PASSWORD', default='admin123')
         
-        if not User.objects.filter(email=email).exists():
+        # Check if superuser already exists by email
+        if User.objects.filter(email=email).exists():
+            self.stdout.write(
+                self.style.WARNING(f'Superuser with email {email} already exists')
+            )
+            return
+        
+        # Check if username 'admin' exists, if so create unique username
+        username = 'admin'
+        if User.objects.filter(username=username).exists():
+            username = f'admin_{str(uuid.uuid4())[:8]}'
+        
+        try:
             User.objects.create_superuser(
                 email=email,
                 password=password,
-                username='admin',
+                username=username,
                 first_name='Admin',
                 last_name='User'
             )
             self.stdout.write(
-                self.style.SUCCESS(f'Superuser created successfully with email: {email}')
+                self.style.SUCCESS(f'Superuser created successfully with email: {email} and username: {username}')
             )
-        else:
+        except Exception as e:
             self.stdout.write(
-                self.style.WARNING(f'Superuser with email {email} already exists')
+                self.style.ERROR(f'Error creating superuser: {str(e)}')
             )
