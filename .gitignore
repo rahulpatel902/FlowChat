@@ -21,7 +21,13 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Do not ignore any directory named "lib" globally; only ignore top-level lib if present
+# This prevents excluding frontend/src/lib from the repository
+/lib/
+
+# Explicitly keep the frontend utilities directory tracked
+!frontend/src/lib/
+!frontend/src/lib/**
 lib64/
 parts/
 sdist/
