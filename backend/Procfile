@@ -1,0 +1,2 @@
+web: gunicorn flowchat.wsgi --log-file -
+worker: python manage.py runworker
