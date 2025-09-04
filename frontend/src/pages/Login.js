@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/use-toast';
 import { Sun, Moon, MessageSquare } from 'lucide-react';
+import CreatorBadge from '../components/common/CreatorBadge';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -66,15 +67,15 @@ const Login = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 ${isDark ? 'bg-[#0d0f12]' : 'bg-gray-50'}`}>
-      <div className="max-w-md w-full space-y-8">
+    <div className={`min-h-screen flex items-center justify-center py-6 px-4 sm:px-6 lg:px-8 ${isDark ? 'bg-[#0d0f12]' : 'bg-gray-50'}`}>
+      <div className="max-w-md w-full space-y-2">
         <div>
           <div className="flex items-center justify-center mb-6">
             <div className={`h-12 w-12 rounded-md flex items-center justify-center shadow-sm ${isDark ? 'bg-violet-600 ring-1 ring-white/10' : 'bg-violet-600 ring-2 ring-violet-300 shadow'}`}>
               <MessageSquare className="h-6 w-6 text-white" />
             </div>
           </div>
-          <h2 className={`mt-6 text-center text-3xl font-extrabold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+          <h2 className={`mt-2 text-center text-3xl font-extrabold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             Welcome to FlowChat
           </h2>
           <p className={`mt-2 text-center text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -92,7 +93,7 @@ const Login = () => {
             </Button>
           </div>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-0 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -151,6 +152,7 @@ const Login = () => {
           </div>
         </form>
       </div>
+      <CreatorBadge isDark={isDark} />
     </div>
   );
 };
