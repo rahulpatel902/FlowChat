@@ -24,6 +24,11 @@ def _csv_env(name: str, default_list: list[str]) -> list[str]:
 
 ALLOWED_HOSTS = _csv_env('ALLOWED_HOSTS', ['localhost', '127.0.0.1', '.herokuapp.com', '.onrender.com'])
 
+# Render: ensure the service's own hostname is allowed even if ALLOWED_HOSTS env is missing/mis-set
+RENDER_HOST = config('RENDER_EXTERNAL_HOSTNAME', default='').strip()
+if RENDER_HOST and RENDER_HOST not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_HOST)
+
 # Frontend base URL used by Django admin "View site" link
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
@@ -173,6 +178,12 @@ CSRF_TRUSTED_ORIGINS = _csv_env(
         "https://flowchat-app.vercel.app",
     ]
 )
+
+# Render: also trust the backend's HTTPS origin for CSRF if available
+if RENDER_HOST:
+    _render_origin = f"https://{RENDER_HOST}"
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
 # Channels configuration
 CHANNEL_LAYERS = {
