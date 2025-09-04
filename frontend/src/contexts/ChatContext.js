@@ -3,6 +3,7 @@ import { authAPI, chatAPI } from '../services/api';
 import { subscribeToMessages, sendMessage, getLastMessage, updateOnlineStatus } from '../firebase/firestore';
 import websocketService from '../services/websocket';
 import { useAuth } from './AuthContext';
+import { HEARTBEAT_MS } from '../constants/presence';
 
 const ChatContext = createContext();
 
@@ -28,8 +29,10 @@ function chatReducer(state, action) {
     case 'UPDATE_ROOM':
       return {
         ...state,
+        // Merge payload into existing room to avoid losing fields like
+        // last_message_preview when we optimistically update unread_count, etc.
         rooms: state.rooms.map(room =>
-          room.id === action.payload.id ? action.payload : room
+          room.id === action.payload.id ? { ...room, ...action.payload } : room
         ),
         activeRoom:
           state.activeRoom && state.activeRoom.id === action.payload.id
@@ -145,17 +148,25 @@ export function ChatProvider({ children }) {
     // Immediately mark online
     goOnline();
 
-    // Keep-alive every 25s to refresh lastSeen/isOnline
-    const keepAlive = setInterval(goOnline, 25000);
+    // Keep-alive to refresh lastSeen/isOnline
+    const keepAlive = setInterval(goOnline, HEARTBEAT_MS);
+
+    // Immediate refresh when user returns to the tab or focuses the window
+    const onVisibility = () => { if (document.visibilityState === 'visible') goOnline(); };
+    const onFocus = () => goOnline();
 
     // Mark offline on tab close/refresh
     window.addEventListener('beforeunload', goOffline);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
 
     return () => {
       clearInterval(keepAlive);
       // Ensure offline when unmounting provider
       goOffline();
       window.removeEventListener('beforeunload', goOffline);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
     };
   }, [isAuthenticated, user?.id]);
 
@@ -200,8 +211,17 @@ export function ChatProvider({ children }) {
   const createRoom = async (roomData) => {
     try {
       const response = await chatAPI.createRoom(roomData);
-      dispatch({ type: 'ADD_ROOM', payload: response.data });
-      return { success: true, room: response.data };
+      const created = response.data;
+      // Immediately fetch full room details to ensure members field is populated
+      let enriched = created;
+      try {
+        const detail = await chatAPI.getRoomDetails(created.id);
+        if (detail?.data) enriched = detail.data;
+      } catch (_) {
+        // If details fetch fails, fall back to created payload
+      }
+      dispatch({ type: 'ADD_ROOM', payload: enriched });
+      return { success: true, room: enriched };
     } catch (error) {
       return { success: false, error: 'Failed to create room' };
     }
@@ -210,8 +230,15 @@ export function ChatProvider({ children }) {
   const createDirectMessage = async (recipientId) => {
     try {
       const response = await chatAPI.createDirectMessage(recipientId);
-      dispatch({ type: 'ADD_ROOM', payload: response.data });
-      return { success: true, room: response.data };
+      const created = response.data;
+      // Fetch full details (members etc.) for consistency with rooms list and header
+      let enriched = created;
+      try {
+        const detail = await chatAPI.getRoomDetails(created.id);
+        if (detail?.data) enriched = detail.data;
+      } catch (_) {}
+      dispatch({ type: 'ADD_ROOM', payload: enriched });
+      return { success: true, room: enriched };
     } catch (error) {
       const serverMsg =
         error?.response?.data?.detail ||
@@ -285,6 +312,18 @@ export function ChatProvider({ children }) {
 
     // Inform backend to mark messages as read
     markMessagesAsRead(room.id);
+
+    // Fetch latest room details in the background to ensure members and metadata are complete
+    (async () => {
+      try {
+        const detail = await chatAPI.getRoomDetails(room.id);
+        if (detail?.data) {
+          dispatch({ type: 'UPDATE_ROOM', payload: detail.data });
+        }
+      } catch (_) {
+        // no-op
+      }
+    })();
   };
 
   const clearActiveRoom = () => {

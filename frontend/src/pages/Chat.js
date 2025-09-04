@@ -178,26 +178,26 @@ const Chat = () => {
             </div>
             <div className="flex items-center gap-1">
               {activeRoom && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`group ${isDark ? 'hover:bg-violet-600 hover:text-white' : ''}`}
-                  onClick={() => { setShowMobileSearch(s => !s); setMobileMenuOpen(false); }}
-                >
-                  <Search className={`h-5 w-5 ${isDark ? 'text-gray-200 group-hover:text-white' : 'group-hover:text-black'}`} />
-                </Button>
-              )}
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`group ${isDark ? 'hover:bg-violet-600 hover:text-white' : ''}`}
-                  onClick={() => { setMobileMenuOpen(o => !o); setShowMobileSearch(false); }}
-                >
-                  <MoreVertical className={`h-5 w-5 ${isDark ? 'text-gray-200 group-hover:text-white' : 'group-hover:text-black'}`} />
-                </Button>
-                {mobileMenuOpen && (
-                  <div className={`absolute right-0 mt-2 w-56 rounded-md shadow-md py-1 z-20 ${isDark ? 'bg-[#13151a] border border-white/10 text-gray-100' : 'bg-white border border-gray-200'}`}>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`group ${isDark ? 'hover:bg-violet-600 hover:text-white' : ''}`}
+                    onClick={() => { setShowMobileSearch(s => !s); setMobileMenuOpen(false); }}
+                  >
+                    <Search className={`h-5 w-5 ${isDark ? 'text-gray-200 group-hover:text-white' : 'group-hover:text-black'}`} />
+                  </Button>
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`group ${isDark ? 'hover:bg-violet-600 hover:text-white' : ''}`}
+                      onClick={() => { setMobileMenuOpen(o => !o); setShowMobileSearch(false); }}
+                    >
+                      <MoreVertical className={`h-5 w-5 ${isDark ? 'text-gray-200 group-hover:text-white' : 'group-hover:text-black'}`} />
+                    </Button>
+                    {mobileMenuOpen && (
+                      <div className={`absolute right-0 mt-2 w-56 rounded-md shadow-md py-1 z-20 ${isDark ? 'bg-[#13151a] border border-white/10 text-gray-100' : 'bg-white border border-gray-200'}`}>
                     {/* Direct chat options */}
                     {activeRoom?.room_type === 'direct' && (
                       <button
@@ -261,9 +261,11 @@ const Chat = () => {
                         <Trash className="h-4 w-4 mr-2" /> Delete chat
                       </button>
                     )}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
 

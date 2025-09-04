@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { formatTime, getInitials } from '../../lib/utils';
 import ProfilePanel from '../profile/ProfilePanel';
+import { subscribeToOnlineStatus } from '../../firebase/firestore';
 
 const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +37,7 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
   const [groupName, setGroupName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]); // array of user objects
   // Group management state (handled via overlays in ChatWindow now)
+  const [selfOnline, setSelfOnline] = useState(null);
 
   const filteredRooms = rooms
     // filter by tab
@@ -61,13 +63,27 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
     .filter(room => {
       const isEmptyDM = room.room_type === 'direct' && !room.last_message_preview;
       const isCreator = room?.created_by?.id === user.id;
-      return !(isEmptyDM && !isCreator);
+      // Never hide the currently active room to avoid flicker when previews are loading
+      const isActive = String(activeRoom?.id) === String(room.id);
+      return isActive || !(isEmptyDM && !isCreator);
     });
 
   const handleRoomSelect = (room) => {
     selectRoom(room);
     if (onClose) onClose();
   };
+
+  // Subscribe to current user's presence to avoid stale user.is_online
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = subscribeToOnlineStatus([user.id], (statuses) => {
+      const st = statuses?.[String(user.id)];
+      setSelfOnline(!!st?.isOnline);
+    });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [user?.id]);
 
     useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -140,7 +156,34 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
       };
       const result = await createRoom(payload);
       if (result.success) {
-        selectRoom(result.room);
+        // Optimistically inject members and member_count so header/UI doesn't flicker
+        const creator = user ? {
+          user: {
+            id: user.id,
+            full_name: user.full_name,
+            username: user.username,
+            profile_picture: user.profile_picture,
+          },
+          role: 'owner',
+        } : null;
+        const others = (selectedMembers || []).map(u => ({
+          user: {
+            id: u.id,
+            full_name: u.full_name,
+            username: u.username,
+            profile_picture: u.profile_picture,
+          },
+          role: 'member',
+        }));
+        const optimisticMembers = [creator, ...others].filter(Boolean);
+        const optimistic = {
+          ...result.room,
+          members: Array.isArray(result.room?.members) && result.room.members.length > 0 ? result.room.members : optimisticMembers,
+          member_count: (typeof result.room?.member_count === 'number' && result.room.member_count > 0)
+            ? result.room.member_count
+            : optimisticMembers.length,
+        };
+        selectRoom(optimistic);
         setShowNewChat(false);
         setNewChatMode('direct');
         setNewUserSearch('');
@@ -436,9 +479,9 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
               {user?.full_name}
             </p>
             <div className="flex items-center space-x-1">
-              <div className={`h-2 w-2 rounded-full ${user?.is_online ? 'bg-violet-500' : 'bg-gray-400'}`} />
+              <div className={`h-2 w-2 rounded-full ${selfOnline ? 'bg-violet-500' : 'bg-gray-400'}`} />
               <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {user?.is_online ? 'Online' : 'Offline'}
+                {selfOnline ? 'Online' : 'Offline'}
               </p>
             </div>
           </div>

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/use-toast';
 import { User, Mail, Edit, Save, X, ArrowLeft } from 'lucide-react';
+import { subscribeToOnlineStatus } from '../firebase/firestore';
 
 const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
@@ -17,6 +18,26 @@ const Profile = () => {
     bio: user?.bio || '',
   });
   const { toast } = useToast();
+  const [selfOnline, setSelfOnline] = useState(null);
+  const [lastSeen, setLastSeen] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = subscribeToOnlineStatus([user.id], (statuses) => {
+      const st = statuses?.[String(user.id)] || {};
+      setSelfOnline(!!st.isOnline);
+      // Firestore Timestamp or Date
+      const ls = st.lastSeen;
+      let dt = null;
+      try {
+        if (ls?.toDate) dt = ls.toDate();
+        else if (ls instanceof Date) dt = ls;
+        else if (typeof ls === 'number') dt = new Date(ls);
+      } catch (_) {}
+      setLastSeen(dt);
+    });
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [user?.id]);
 
   const handleChange = (e) => {
     setFormData({
@@ -188,9 +209,9 @@ const Profile = () => {
                     Status
                   </label>
                   <div className="flex items-center space-x-2">
-                    <div className={`h-3 w-3 rounded-full ${user?.is_online ? 'bg-violet-600' : 'bg-gray-400'}`} />
+                    <div className={`h-3 w-3 rounded-full ${selfOnline ? 'bg-violet-600' : 'bg-gray-400'}`} />
                     <span className="text-sm text-gray-600">
-                      {user?.is_online ? 'Online' : `Last seen ${new Date(user?.last_seen).toLocaleDateString()}`}
+                      {selfOnline ? 'Online' : (lastSeen ? `Last seen ${lastSeen.toLocaleString()}` : 'Offline')}
                     </span>
                   </div>
                 </div>

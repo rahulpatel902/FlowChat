@@ -6,6 +6,7 @@ import { Input } from '../ui/input';
 import { useToast } from '../ui/use-toast';
 import { X, Edit, Save, Mail, LogOut, Pencil } from 'lucide-react';
 import { uploadProfilePicture, FILE_TYPES, validateFile } from '../../firebase/storage';
+import { subscribeToOnlineStatus } from '../../firebase/firestore';
 
 const ProfilePanel = ({ isDark = false, onClose }) => {
   const { user, updateProfile, logout } = useAuth();
@@ -15,6 +16,7 @@ const ProfilePanel = ({ isDark = false, onClose }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selfOnline, setSelfOnline] = useState(null);
   const initialForm = useMemo(() => ({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
@@ -27,6 +29,16 @@ const ProfilePanel = ({ isDark = false, onClose }) => {
   useEffect(() => {
     setFormData(initialForm);
   }, [initialForm]);
+
+  // Keep presence in sync using Firestore (avoids stale AuthContext user.is_online)
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = subscribeToOnlineStatus([user.id], (statuses) => {
+      const st = statuses?.[String(user.id)];
+      setSelfOnline(!!st?.isOnline);
+    });
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [user?.id]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -113,7 +125,7 @@ const ProfilePanel = ({ isDark = false, onClose }) => {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-40" aria-modal="true" role="dialog" onClick={onClose}>
+    <div className="fixed inset-0 z-[60]" aria-modal="true" role="dialog" onClick={onClose}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" />
 
@@ -180,8 +192,8 @@ const ProfilePanel = ({ isDark = false, onClose }) => {
               <p className="text-base font-semibold">{user?.full_name}</p>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>@{user?.username}</p>
               <div className="flex items-center gap-2 mt-1">
-                <div className={`h-2 w-2 rounded-full ${user?.is_online ? 'bg-violet-600' : 'bg-gray-400'}`} />
-                <span className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{user?.is_online ? 'Online' : 'Offline'}</span>
+                <div className={`h-2 w-2 rounded-full ${selfOnline ? 'bg-violet-600' : 'bg-gray-400'}`} />
+                <span className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{selfOnline ? 'Online' : 'Offline'}</span>
               </div>
               {isEditing && avatarFile && (
                 <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Image selected. {uploadProgress > 0 ? `Uploading… ${uploadProgress.toFixed(0)}%` : 'Will upload on Save.'}</p>

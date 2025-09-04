@@ -17,8 +17,7 @@ A modern real-time chat application built with React, Django, and Firebase.
 ChatFlow/
 ├── backend/          # Django API server
 ├── frontend/         # React application
-├── firebase/         # Firebase configuration
-└── docs/            # Documentation
+└── docs/             # Documentation
 ```
 
 ## 🛠️ Setup Instructions
@@ -43,7 +42,7 @@ npm start
 ### Firebase Setup
 1. Create a Firebase project
 2. Enable Firestore and Storage
-3. Add your Firebase config to `firebase/config.js`
+3. Add your Firebase config to `frontend/src/firebase/config.js`
 
 ## 🌟 Features
 

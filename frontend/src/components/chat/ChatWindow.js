@@ -29,6 +29,7 @@ import { formatTime, getInitials, debounce } from '../../lib/utils';
 import { uploadImage, uploadChatFile, uploadGroupAvatar, FILE_TYPES, validateFile } from '../../firebase/storage';
 import { deleteMessage as deleteMessageFS, subscribeToOnlineStatus, subscribeToReadReceipts, markMessageAsRead } from '../../firebase/firestore';
 import websocketService from '../../services/websocket';
+import Portal from '../ui/Portal';
 
 const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick = 0 }) => {
   const [message, setMessage] = useState('');
@@ -909,7 +910,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                     {typingUsers.length > 0 && <span className="italic text-gray-400">typing…</span>}
                   </>
                 ) : (
-                  <span>{`${activeRoom.member_count} members`}</span>
+                  <span>{`${(typeof activeRoom.member_count === 'number' && activeRoom.member_count > 0) ? activeRoom.member_count : (activeRoom.members?.length || 0)} members`}</span>
                 )}
               </div>
             </div>
@@ -994,137 +995,140 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
 
       {/* Group Members Panel (overlay) */}
       {showMembersPanel && activeRoom?.room_type === 'group' && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center" onClick={() => setShowMembersPanel(false)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className={`relative z-10 w-[420px] max-w-[95vw] rounded-md shadow-lg p-4 border ${
-              isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-base font-semibold">Members ({activeRoom.member_count})</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowMembersPanel(false)}
-                className={isDark ? 'hover:bg-violet-600 hover:text-white' : 'hover:bg-violet-600 hover:text-white'}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className={`max-h-60 overflow-y-auto custom-scrollbar divide-y ${isDark ? 'divide-white/10' : 'divide-gray-200'}`}>
-            {(activeRoom.members || []).map(m => (
-              <div key={m.user.id} className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  {m.user.profile_picture ? (
-                    <img
-                      src={m.user.profile_picture}
-                      alt={m.user.full_name || 'User'}
-                      className="h-7 w-7 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-medium bg-violet-600 text-white">
-                      {getInitials(m.user.full_name || m.user.username || 'U')}
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <div className="font-medium">{m.user.full_name}</div>
-                    <div className="text-xs opacity-70">{m.role}</div>
-                  </div>
-                </div>
-                {isAdmin && m.user.id !== user?.id && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={isDark ? 'hover:bg-violet-600 hover:text-white' : 'hover:bg-violet-600 hover:text-white'}
-                    onClick={async () => {
-                    try {
-                      const res = await removeMember(activeRoom.id, m.user.id);
-                      if (res.success) {
-                        toast({ title: 'Member removed' });
-                      } else {
-                        toast({ title: 'Failed to remove', description: res.error, variant: 'destructive' });
-                      }
-                    } catch (_) {
-                      toast({ title: 'Failed to remove', variant: 'destructive' });
-                    }
-                  }}>Remove</Button>
-                )}
+        <Portal>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center" onClick={() => setShowMembersPanel(false)}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div
+              className={`relative z-10 w-[420px] max-w-[95vw] rounded-md shadow-lg p-4 border ${
+                isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-semibold">Members ({(typeof activeRoom.member_count === 'number' && activeRoom.member_count > 0) ? activeRoom.member_count : (activeRoom.members?.length || 0)})</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMembersPanel(false)}
+                  className={isDark ? 'hover:bg-violet-600 hover:text-white' : 'hover:bg-violet-600 hover:text-white'}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-            ))}
-          </div>
-            <div className="mt-3">
-              <p className="text-sm mb-1">Invite members</p>
-              <Input
-                placeholder="Search users…"
-                value={inviteSearch}
-                onChange={(e) => { setInviteSearch(e.target.value); if (e.target.value) searchUsers(e.target.value); }}
-                className={`${isDark ? 'mb-2 bg-[#151821] text-gray-100 placeholder:text-gray-400 border border-white/10' : 'mb-2'}`}
-              />
-            {inviteSelected.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {inviteSelected.map(u => (
-                  <span key={u.id} className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100">{u.full_name}</span>
-                ))}
-              </div>
-            )}
-              <div className="max-h-40 overflow-y-auto custom-scrollbar">
-              {!!inviteSearch.trim() && searchedUsers.length === 0 && (
-                <div className="text-xs opacity-70 px-1 py-2">No users found</div>
-              )}
-              {(searchedUsers || [])
-                .filter(u => !(activeRoom.members || []).some(m => m.user.id === u.id))
-                .filter(u => !inviteSelected.some(s => s.id === u.id))
-                .filter(u => u.id !== user?.id)
-                .map(u => (
-                  <button
-                    key={u.id}
-                    className={`w-full text-left px-2 py-2 text-sm rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
-                    onClick={() => setInviteSelected(prev => [...prev, u])}
-                  >
+              <div className={`max-h-60 overflow-y-auto custom-scrollbar divide-y ${isDark ? 'divide-white/10' : 'divide-gray-200'}`}>
+                {(activeRoom.members || []).map(m => (
+                  <div key={m.user.id} className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2">
-                      {u.profile_picture ? (
+                      {m.user.profile_picture ? (
                         <img
-                          src={u.profile_picture}
-                          alt={u.full_name || u.username || 'User'}
+                          src={m.user.profile_picture}
+                          alt={m.user.full_name || 'User'}
                           className="h-7 w-7 rounded-full object-cover"
                         />
                       ) : (
                         <div className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-medium bg-violet-600 text-white">
-                          {getInitials(u.full_name || u.username || 'U')}
+                          {getInitials(m.user.full_name || m.user.username || 'U')}
                         </div>
                       )}
-                      <div>
-                        <div className="font-medium">{u.full_name || u.username}</div>
-                        {u.username && <div className="text-xs opacity-70">@{u.username}</div>}
+                      <div className="text-sm">
+                        <div className="font-medium">{m.user.full_name}</div>
+                        <div className="text-xs opacity-70">{m.role}</div>
                       </div>
                     </div>
-                  </button>
+                    {isAdmin && m.user.id !== user?.id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className={isDark ? 'hover:bg-violet-600 hover:text-white' : 'hover:bg-violet-600 hover:text-white'}
+                        onClick={async () => {
+                          try {
+                            const res = await removeMember(activeRoom.id, m.user.id);
+                            if (res.success) {
+                              toast({ title: 'Member removed' });
+                            } else {
+                              toast({ title: 'Failed to remove', description: res.error, variant: 'destructive' });
+                            }
+                          } catch (_) {
+                            toast({ title: 'Failed to remove', variant: 'destructive' });
+                          }
+                        }}
+                      >Remove</Button>
+                    )}
+                  </div>
                 ))}
               </div>
-              <div className="flex justify-end gap-2 mt-2">
-                <Button onClick={() => { setInviteSelected([]); setInviteSearch(''); setShowMembersPanel(false); }}>Close</Button>
-                <Button disabled={!isAdmin || inviteSelected.length === 0} onClick={async () => {
-                  try {
-                    const ids = inviteSelected.map(u => u.id);
-                    const res = await addMembers(activeRoom.id, ids);
-                    if (res.success) {
-                      toast({ title: 'Invites sent' });
-                      setInviteSelected([]);
-                      setInviteSearch('');
-                      setShowMembersPanel(false);
-                    } else {
-                      toast({ title: 'Failed to add', description: res.error, variant: 'destructive' });
+              <div className="mt-3">
+                <p className="text-sm mb-1">Invite members</p>
+                <Input
+                  placeholder="Search users…"
+                  value={inviteSearch}
+                  onChange={(e) => { setInviteSearch(e.target.value); if (e.target.value) searchUsers(e.target.value); }}
+                  className={`${isDark ? 'mb-2 bg-[#151821] text-gray-100 placeholder:text-gray-400 border border-white/10' : 'mb-2'}`}
+                />
+                {inviteSelected.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {inviteSelected.map(u => (
+                      <span key={u.id} className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-100">{u.full_name}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                  {!!inviteSearch.trim() && searchedUsers.length === 0 && (
+                    <div className="text-xs opacity-70 px-1 py-2">No users found</div>
+                  )}
+                  {(searchedUsers || [])
+                    .filter(u => !(activeRoom.members || []).some(m => m.user.id === u.id))
+                    .filter(u => !inviteSelected.some(s => s.id === u.id))
+                    .filter(u => u.id !== user?.id)
+                    .map(u => (
+                      <button
+                        key={u.id}
+                        className={`w-full text-left px-2 py-2 text-sm rounded ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}
+                        onClick={() => setInviteSelected(prev => [...prev, u])}
+                      >
+                        <div className="flex items-center gap-2">
+                          {u.profile_picture ? (
+                            <img
+                              src={u.profile_picture}
+                              alt={u.full_name || u.username || 'User'}
+                              className="h-7 w-7 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-medium bg-violet-600 text-white">
+                              {getInitials(u.full_name || u.username || 'U')}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{u.full_name || u.username}</div>
+                            {u.username && <div className="text-xs opacity-70">@{u.username}</div>}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button onClick={() => { setInviteSelected([]); setInviteSearch(''); setShowMembersPanel(false); }}>Close</Button>
+                  <Button disabled={!isAdmin || inviteSelected.length === 0} onClick={async () => {
+                    try {
+                      const ids = inviteSelected.map(u => u.id);
+                      const res = await addMembers(activeRoom.id, ids);
+                      if (res.success) {
+                        toast({ title: 'Invites sent' });
+                        setInviteSelected([]);
+                        setInviteSearch('');
+                        setShowMembersPanel(false);
+                      } else {
+                        toast({ title: 'Failed to add', description: res.error, variant: 'destructive' });
+                      }
+                    } catch (_) {
+                      toast({ title: 'Failed to add', variant: 'destructive' });
                     }
-                  } catch (_) {
-                    toast({ title: 'Failed to add', variant: 'destructive' });
-                  }
-                }}>Add</Button>
+                  }}>Add</Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Group Info Panel (group chats only) */}
@@ -1262,14 +1266,15 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
 
       {/* Rename Group Panel (overlay) */}
       {showRenamePanel && activeRoom?.room_type === 'group' && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center" onClick={() => setShowRenamePanel(false)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className={`relative z-10 w-[420px] max-w-[95vw] rounded-md shadow-lg p-4 border ${
-              isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Portal>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center" onClick={() => setShowRenamePanel(false)}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div
+              className={`relative z-10 w-[420px] max-w-[95vw] rounded-md shadow-lg p-4 border ${
+                isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-semibold">Rename group</h3>
               <Button
@@ -1305,6 +1310,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Messages */}
@@ -1751,30 +1757,32 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
       )}
       {/* Confirm leave/delete overlay (scoped to chat area) */}
       {confirmAction.show && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center" onClick={() => setConfirmAction({ show: false, type: null, room: null })}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className={`relative z-10 rounded-md shadow-lg p-5 w-80 border ${isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold mb-2">
-              {confirmAction.type === 'delete' ? 'Delete chat?' : 'Leave chat?'}
-            </h3>
-            <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              {confirmAction.type === 'delete'
-                ? 'This will permanently remove the chat for all members.'
-                : 'You will no longer see this chat in your list.'}
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button onClick={() => setConfirmAction({ show: false, type: null, room: null })}>Cancel</Button>
-              {confirmAction.type === 'delete' ? (
-                <Button variant="destructive" onClick={handleDeleteRoom}>Delete</Button>
-              ) : (
-                <Button onClick={handleLeaveRoom}>Leave</Button>
-              )}
+        <Portal>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center" onClick={() => setConfirmAction({ show: false, type: null, room: null })}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div
+              className={`relative z-10 rounded-md shadow-lg p-5 w-80 border ${isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-2">
+                {confirmAction.type === 'delete' ? 'Delete chat?' : 'Leave chat?'}
+              </h3>
+              <p className={`text-sm mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                {confirmAction.type === 'delete'
+                  ? 'This will permanently remove the chat for all members.'
+                  : 'You will no longer see this chat in your list.'}
+              </p>
+              <div className="flex justify-end space-x-2">
+                <Button onClick={() => setConfirmAction({ show: false, type: null, room: null })}>Cancel</Button>
+                {confirmAction.type === 'delete' ? (
+                  <Button variant="destructive" onClick={handleDeleteRoom}>Delete</Button>
+                ) : (
+                  <Button onClick={handleLeaveRoom}>Leave</Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+          </Portal>
       )}
     </div>
   );

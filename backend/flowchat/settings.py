@@ -15,7 +15,14 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.herokuapp.com', '.onrender.com']
+def _csv_env(name: str, default_list: list[str]) -> list[str]:
+    """Return comma-separated env var as list, or default_list if empty."""
+    raw = config(name, default='')
+    if isinstance(raw, str) and raw.strip():
+        return [item.strip() for item in raw.split(',') if item.strip()]
+    return default_list
+
+ALLOWED_HOSTS = _csv_env('ALLOWED_HOSTS', ['localhost', '127.0.0.1', '.herokuapp.com', '.onrender.com'])
 
 # Frontend base URL used by Django admin "View site" link
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
@@ -146,20 +153,26 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://flowchat-app.vercel.app",
-]
+CORS_ALLOWED_ORIGINS = _csv_env(
+    'CORS_ALLOWED_ORIGINS',
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://flowchat-app.vercel.app",
+    ]
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
 # Trust Vercel frontend for CSRF protection as well
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://flowchat-app.vercel.app",
-]
+CSRF_TRUSTED_ORIGINS = _csv_env(
+    'CSRF_TRUSTED_ORIGINS',
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://flowchat-app.vercel.app",
+    ]
+)
 
 # Channels configuration
 CHANNEL_LAYERS = {
