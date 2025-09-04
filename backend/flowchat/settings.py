@@ -79,9 +79,14 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"postgresql://{config('DB_USER', default='postgres')}:{config('DB_PASSWORD', default='password')}@{config('DB_HOST', default='localhost')}:{config('DB_PORT', default='5432')}/{config('DB_NAME', default='flowchat')}"
+        default=f"postgresql://{config('DB_USER', default='postgres')}:{config('DB_PASSWORD', default='password')}@{config('DB_HOST', default='localhost')}:{config('DB_PORT', default='5432')}/{config('DB_NAME', default='flowchat')}",
+        conn_max_age=600,
+        conn_health_checks=True,
     )
 }
+
+# Use psycopg3 for PostgreSQL connections
+DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
