@@ -156,33 +156,6 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
       };
       const result = await createRoom(payload);
       if (result.success) {
-        // Optimistically inject members and member_count so header/UI doesn't flicker
-        const creator = user ? {
-          user: {
-            id: user.id,
-            full_name: user.full_name,
-            username: user.username,
-            profile_picture: user.profile_picture,
-          },
-          role: 'owner',
-        } : null;
-        const others = (selectedMembers || []).map(u => ({
-          user: {
-            id: u.id,
-            full_name: u.full_name,
-            username: u.username,
-            profile_picture: u.profile_picture,
-          },
-          role: 'member',
-        }));
-        const optimisticMembers = [creator, ...others].filter(Boolean);
-        const optimistic = {
-          ...result.room,
-          members: Array.isArray(result.room?.members) && result.room.members.length > 0 ? result.room.members : optimisticMembers,
-          member_count: (typeof result.room?.member_count === 'number' && result.room.member_count > 0)
-            ? result.room.member_count
-            : optimisticMembers.length,
-        };
         setShowNewChat(false);
         setNewChatMode('direct');
         setNewUserSearch('');
