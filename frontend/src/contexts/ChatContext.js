@@ -120,7 +120,7 @@ export function ChatProvider({ children }) {
     websocketService.on('typing_indicator', (data) => {
       dispatch({ type: 'SET_TYPING_USERS', payload: data });
     });
-  }, [dispatch, loadRooms]);
+  }, [dispatch, loadRooms, state.activeRoom?.id, user?.id]);
 
   // Firestore subscription for messages in active room
   const subscribeToRoomMessages = useCallback((roomId, limitCount) => {

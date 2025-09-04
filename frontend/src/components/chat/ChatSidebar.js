@@ -7,7 +7,6 @@ import { useToast } from '../ui/use-toast';
 import { 
   Search, 
   Plus, 
-  MessageCircle, 
   Users, 
   Pencil,
   Settings,
@@ -29,18 +28,14 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
   const [newChatMode, setNewChatMode] = useState('direct'); // 'direct' | 'group'
   const [filter, setFilter] = useState('all'); // all | unread | favourites | groups
   const [newUserSearch, setNewUserSearch] = useState('');
-  const { rooms, activeRoom, selectRoom, createDirectMessage, createRoom, searchUsers, searchedUsers, loadRooms, renameRoom, addMembers, removeMember } = useChat();
+  const { rooms, activeRoom, selectRoom, createDirectMessage, createRoom, searchUsers, searchedUsers } = useChat();
   const { user } = useAuth();
   const { toast } = useToast();
   const [openMenuRoomId, setOpenMenuRoomId] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]); // array of user objects
-  // Group management state
-  const [renameState, setRenameState] = useState({ show: false, room: null, name: '' });
-  const [manageState, setManageState] = useState({ show: false, room: null });
-  const [manageSearch, setManageSearch] = useState('');
-  const [manageSelected, setManageSelected] = useState([]); // users to add
+  // Group management state (handled via overlays in ChatWindow now)
 
   const filteredRooms = rooms
     // filter by tab

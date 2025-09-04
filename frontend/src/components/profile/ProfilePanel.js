@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useToast } from '../ui/use-toast';
-import { X, Edit, Save, User, Mail, LogOut, Pencil } from 'lucide-react';
+import { X, Edit, Save, Mail, LogOut, Pencil } from 'lucide-react';
 import { uploadProfilePicture, FILE_TYPES, validateFile } from '../../firebase/storage';
 
 const ProfilePanel = ({ isDark = false, onClose }) => {
