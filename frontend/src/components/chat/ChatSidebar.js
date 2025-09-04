@@ -113,13 +113,13 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
   const handleNewDirectMessage = async (recipientId) => {
     const result = await createDirectMessage(recipientId);
     if (result.success) {
-      selectRoom(result.room);
       setShowNewChat(false);
       setNewChatMode('direct');
       setNewUserSearch('');
       setSelectedMembers([]);
       setGroupName('');
       if (onClose) onClose();
+      toast({ title: 'Direct message created' });
     } else {
       toast({
         title: "Error",
@@ -183,7 +183,6 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
             ? result.room.member_count
             : optimisticMembers.length,
         };
-        selectRoom(optimistic);
         setShowNewChat(false);
         setNewChatMode('direct');
         setNewUserSearch('');
