@@ -524,8 +524,11 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     if (!activeRoom || activeRoom.room_type !== 'direct') return;
     const peer = activeRoom.members?.find(m => m.user.id !== user?.id)?.user;
     if (!peer) return;
+    // Default to offline until first snapshot to avoid stale 'Online'
+    setPeerStatus('Offline');
     const unsub = subscribeToPresence([peer.id], (statuses) => {
-      setPeerStatus(statuses?.[peer.id]?.isOnline ? 'Online' : 'Offline');
+      const st = statuses?.[String(peer.id)];
+      setPeerStatus(st?.isOnline ? 'Online' : 'Offline');
     });
     return () => {
       if (typeof unsub === 'function') unsub();

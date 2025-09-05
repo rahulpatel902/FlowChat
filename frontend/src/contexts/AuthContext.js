@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { authAPI } from '../services/api';
 import { auth } from '../firebase/config';
 import { signInWithCustomToken, signOut as firebaseSignOut } from 'firebase/auth';
@@ -36,6 +36,7 @@ function authReducer(state, action) {
 
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const presenceStopRef = useRef(null);
 
   useEffect(() => {
     checkAuthStatus();
@@ -58,7 +59,8 @@ export function AuthProvider({ children }) {
           await signInWithCustomToken(auth, data.custom_token);
           // Start RTDB presence immediately after Firebase sign-in
           if (response?.data?.id) {
-            startPresence(response.data.id);
+            try { if (typeof presenceStopRef.current === 'function') presenceStopRef.current(); } catch (_) {}
+            presenceStopRef.current = startPresence(response.data.id);
             try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: true } })); } catch (_) {}
           }
         }
@@ -90,7 +92,8 @@ export function AuthProvider({ children }) {
           await signInWithCustomToken(auth, data.custom_token);
           // Start RTDB presence immediately after Firebase sign-in
           if (user?.id) {
-            startPresence(user.id);
+            try { if (typeof presenceStopRef.current === 'function') presenceStopRef.current(); } catch (_) {}
+            presenceStopRef.current = startPresence(user.id);
             try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: true } })); } catch (_) {}
           }
         }
@@ -162,6 +165,9 @@ export function AuthProvider({ children }) {
       // Ensure RTDB presence is marked offline
       try {
         const prevUid = state?.user?.id;
+        // First dispose any live presence starter (detaches .info/connected listener and sets offline)
+        try { if (typeof presenceStopRef.current === 'function') presenceStopRef.current(); } catch (_) {}
+        presenceStopRef.current = null;
         if (prevUid) stopPresence(prevUid);
       } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: false } })); } catch (_) {}
