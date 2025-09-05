@@ -57,7 +57,10 @@ export function AuthProvider({ children }) {
         if (data?.custom_token) {
           await signInWithCustomToken(auth, data.custom_token);
           // Start RTDB presence immediately after Firebase sign-in
-          if (response?.data?.id) startPresence(response.data.id);
+          if (response?.data?.id) {
+            startPresence(response.data.id);
+            try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: true } })); } catch (_) {}
+          }
         }
       } catch (e) {
         console.error('Failed to sign in to Firebase with custom token (restore):', e);
@@ -86,7 +89,10 @@ export function AuthProvider({ children }) {
         if (data?.custom_token) {
           await signInWithCustomToken(auth, data.custom_token);
           // Start RTDB presence immediately after Firebase sign-in
-          if (user?.id) startPresence(user.id);
+          if (user?.id) {
+            startPresence(user.id);
+            try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: true } })); } catch (_) {}
+          }
         }
       } catch (e) {
         console.error('Failed to sign in to Firebase with custom token (login):', e);
@@ -158,6 +164,7 @@ export function AuthProvider({ children }) {
         const prevUid = state?.user?.id;
         if (prevUid) stopPresence(prevUid);
       } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: false } })); } catch (_) {}
       dispatch({ type: 'LOGOUT' });
     }
   };

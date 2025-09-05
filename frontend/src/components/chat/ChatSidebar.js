@@ -85,6 +85,18 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
     };
   }, [user?.id]);
 
+  // Also react instantly to AuthContext broadcasting self-presence changes (right after login/logout)
+  useEffect(() => {
+    const handler = (e) => {
+      try {
+        const online = !!(e?.detail?.online);
+        setSelfOnline(online);
+      } catch (_) {}
+    };
+    window.addEventListener('self-presence', handler);
+    return () => window.removeEventListener('self-presence', handler);
+  }, []);
+
     useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (showNewChat && newUserSearch) {
