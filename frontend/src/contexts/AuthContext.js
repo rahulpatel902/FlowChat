@@ -69,6 +69,15 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      try {
+        const prevUid = state?.user?.id;
+        // Attempt to set offline in case a previous session left it online
+        if (prevUid) {
+          try { if (typeof presenceStopRef.current === 'function') presenceStopRef.current(); } catch (_) {}
+          presenceStopRef.current = null;
+          await stopPresence(prevUid);
+        }
+      } catch (_) {}
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       dispatch({ type: 'LOGOUT' });
@@ -154,6 +163,15 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Ensure RTDB presence is marked offline BEFORE signing out of Firebase (auth may be required by RTDB rules)
+      try {
+        const prevUid = state?.user?.id;
+        // First dispose any live presence starter (detaches .info/connected listener and sets offline)
+        try { if (typeof presenceStopRef.current === 'function') presenceStopRef.current(); } catch (_) {}
+        presenceStopRef.current = null;
+        if (prevUid) await stopPresence(prevUid);
+      } catch (_) {}
+      // Now clear local tokens
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       // Sign out from Firebase as well
@@ -162,14 +180,6 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.warn('Firebase sign-out failed:', e);
       }
-      // Ensure RTDB presence is marked offline
-      try {
-        const prevUid = state?.user?.id;
-        // First dispose any live presence starter (detaches .info/connected listener and sets offline)
-        try { if (typeof presenceStopRef.current === 'function') presenceStopRef.current(); } catch (_) {}
-        presenceStopRef.current = null;
-        if (prevUid) stopPresence(prevUid);
-      } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('self-presence', { detail: { online: false } })); } catch (_) {}
       dispatch({ type: 'LOGOUT' });
     }

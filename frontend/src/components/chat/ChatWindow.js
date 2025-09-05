@@ -73,6 +73,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const [peerStatus, setPeerStatus] = useState(null);
+  const peerStatusTimerRef = useRef(null);
   const [ctxMenu, setCtxMenu] = useState({ open: false, x: 0, y: 0, msg: null });
   const [readsPanel, setReadsPanel] = useState({ open: false, x: 0, y: 0, msg: null, readers: [], nonReaders: [] });
   const emojiAnchorRef = useRef(null);
@@ -528,10 +529,25 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     setPeerStatus('Offline');
     const unsub = subscribeToPresence([peer.id], (statuses) => {
       const st = statuses?.[String(peer.id)];
-      setPeerStatus(st?.isOnline ? 'Online' : 'Offline');
+      const nextOnline = !!st?.isOnline;
+      // Stabilize: apply Online only after a short delay; Offline immediately
+      if (nextOnline) {
+        if (peerStatusTimerRef.current) clearTimeout(peerStatusTimerRef.current);
+        peerStatusTimerRef.current = setTimeout(() => setPeerStatus('Online'), 700);
+      } else {
+        if (peerStatusTimerRef.current) {
+          clearTimeout(peerStatusTimerRef.current);
+          peerStatusTimerRef.current = null;
+        }
+        setPeerStatus('Offline');
+      }
     });
     return () => {
       if (typeof unsub === 'function') unsub();
+      if (peerStatusTimerRef.current) {
+        clearTimeout(peerStatusTimerRef.current);
+        peerStatusTimerRef.current = null;
+      }
     };
   }, [activeRoom, user]);
 

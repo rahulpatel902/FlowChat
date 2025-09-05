@@ -3,6 +3,7 @@ import { rtdb } from './config';
 
 // Path helper: status/{uid}
 const statusRef = (uid) => ref(rtdb, `status/${uid}`);
+const STALE_MS = 90 * 1000; // consider 'online' stale if not updated within 90s
 
 // Start presence tracking for the given user.
 // Uses onDisconnect to flip to offline immediately if the connection drops.
@@ -37,8 +38,12 @@ export function startPresence(uid) {
 
 // Explicitly stop presence for a user (e.g., on logout)
 export function stopPresence(uid) {
-  if (!uid) return;
-  set(statusRef(uid), {
+  if (!uid) return Promise.resolve();
+  try {
+    // Best-effort: ensure any pending onDisconnect won't reapply after explicit offline
+    try { onDisconnect(statusRef(uid)).cancel(); } catch (_) {}
+  } catch (_) {}
+  return set(statusRef(uid), {
     state: 'offline',
     last_changed: serverTimestamp(),
   }).catch(() => {});
@@ -59,8 +64,9 @@ export function subscribeToPresence(userIds, callback) {
     const out = {};
     for (const uid of userIds.map(String)) {
       const data = latest.get(uid);
-      const state = data?.state === 'online';
       const lastSeen = typeof data?.last_changed === 'number' ? data.last_changed : null;
+      const fresh = lastSeen ? (Date.now() - lastSeen) < STALE_MS : false;
+      const state = data?.state === 'online' && fresh;
       out[uid] = { isOnline: state, lastSeen };
     }
     callback(out);
