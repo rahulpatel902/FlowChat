@@ -21,12 +21,15 @@ export function startPresence(uid) {
         state: 'offline',
         last_changed: serverTimestamp(),
       });
-    } catch (_) {}
+      if (process.env.NODE_ENV !== 'production') console.info('[presence] onDisconnect registered for', uid);
+    } catch (e) { if (process.env.NODE_ENV !== 'production') console.warn('[presence] onDisconnect failed', e); }
 
     set(statusRef(uid), {
       state: 'online',
       last_changed: serverTimestamp(),
-    }).catch(() => {});
+    }).then(() => {
+      if (process.env.NODE_ENV !== 'production') console.info('[presence] online write OK for', uid);
+    }).catch((e) => { if (process.env.NODE_ENV !== 'production') console.warn('[presence] online write FAILED', e); });
   });
 
   // Return a stop function that also detaches the connected listener
@@ -41,12 +44,14 @@ export function stopPresence(uid) {
   if (!uid) return Promise.resolve();
   try {
     // Best-effort: ensure any pending onDisconnect won't reapply after explicit offline
-    try { onDisconnect(statusRef(uid)).cancel(); } catch (_) {}
+    try { onDisconnect(statusRef(uid)).cancel(); if (process.env.NODE_ENV !== 'production') console.info('[presence] onDisconnect cancelled for', uid); } catch (e) { if (process.env.NODE_ENV !== 'production') console.warn('[presence] onDisconnect cancel failed', e); }
   } catch (_) {}
   return set(statusRef(uid), {
     state: 'offline',
     last_changed: serverTimestamp(),
-  }).catch(() => {});
+  }).then(() => {
+    if (process.env.NODE_ENV !== 'production') console.info('[presence] offline write OK for', uid);
+  }).catch((e) => { if (process.env.NODE_ENV !== 'production') console.warn('[presence] offline write FAILED', e); });
 }
 
 // Subscribe to presence for an array of userIds.
