@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const CreatorBadge = ({ isDark = false, username = 'rahulpatel902', avatarPath = '/rp.jpg' }) => {
+const CreatorBadge = ({ isDark = false, username = 'rahulpatel902', avatarPath = '/rp.jpg', position = 'bottom-right' }) => {
   const [visible, setVisible] = useState(false);
 
   // Ensure hidden on initial mount (avoid Fast Refresh preserving previous state)
@@ -13,8 +13,11 @@ const CreatorBadge = ({ isDark = false, username = 'rahulpatel902', avatarPath =
     setVisible((v) => !v);
   };
 
+  // Map position to container classes
+  const containerPos = position === 'top-right' ? 'fixed right-4 top-4' : 'fixed right-4 bottom-4';
+
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex items-center select-none">
+    <div className={`${containerPos} z-40 flex items-center select-none`}>
       {/* Username pill (opens GitHub) */}
       <a
         href={`https://github.com/${username}`}

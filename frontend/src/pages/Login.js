@@ -152,7 +152,7 @@ const Login = () => {
           </div>
         </form>
       </div>
-      <CreatorBadge isDark={isDark} />
+      <CreatorBadge isDark={isDark} position="top-right" />
     </div>
   );
 };
