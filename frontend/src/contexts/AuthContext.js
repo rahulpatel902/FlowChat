@@ -38,6 +38,8 @@ export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
   const presenceStopRef = useRef(null);
 
+  // We only want to run the auth bootstrap once on mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkAuthStatus();
   }, []);
