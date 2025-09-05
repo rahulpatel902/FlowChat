@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { auth } from '../firebase/config';
 import { signInWithCustomToken, signOut as firebaseSignOut } from 'firebase/auth';
+import { startPresence, stopPresence } from '../firebase/rtdbPresence';
 
 const AuthContext = createContext();
 
@@ -55,6 +56,8 @@ export function AuthProvider({ children }) {
         const { data } = await authAPI.getFirebaseCustomToken();
         if (data?.custom_token) {
           await signInWithCustomToken(auth, data.custom_token);
+          // Start RTDB presence immediately after Firebase sign-in
+          if (response?.data?.id) startPresence(response.data.id);
         }
       } catch (e) {
         console.error('Failed to sign in to Firebase with custom token (restore):', e);
@@ -82,6 +85,8 @@ export function AuthProvider({ children }) {
         const { data } = await authAPI.getFirebaseCustomToken();
         if (data?.custom_token) {
           await signInWithCustomToken(auth, data.custom_token);
+          // Start RTDB presence immediately after Firebase sign-in
+          if (user?.id) startPresence(user.id);
         }
       } catch (e) {
         console.error('Failed to sign in to Firebase with custom token (login):', e);
@@ -109,6 +114,8 @@ export function AuthProvider({ children }) {
         const { data } = await authAPI.getFirebaseCustomToken();
         if (data?.custom_token) {
           await signInWithCustomToken(auth, data.custom_token);
+          // Start RTDB presence immediately after Firebase sign-in
+          if (user?.id) startPresence(user.id);
         }
       } catch (e) {
         console.error('Failed to sign in to Firebase with custom token (register):', e);
@@ -131,6 +138,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
+      const prevUid = state?.user?.id;
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         await authAPI.logout(refreshToken);
@@ -146,6 +154,11 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.warn('Firebase sign-out failed:', e);
       }
+      // Ensure RTDB presence is marked offline
+      try {
+        const prevUid = state?.user?.id;
+        if (prevUid) stopPresence(prevUid);
+      } catch (_) {}
       dispatch({ type: 'LOGOUT' });
     }
   };

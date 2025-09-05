@@ -27,7 +27,8 @@ import {
 } from 'lucide-react';
 import { formatTime, getInitials, debounce } from '../../lib/utils';
 import { uploadImage, uploadChatFile, uploadGroupAvatar, FILE_TYPES, validateFile } from '../../firebase/storage';
-import { deleteMessage as deleteMessageFS, subscribeToOnlineStatus, subscribeToReadReceipts, markMessageAsRead } from '../../firebase/firestore';
+import { deleteMessage as deleteMessageFS, subscribeToReadReceipts, markMessageAsRead } from '../../firebase/firestore';
+import { subscribeToPresence } from '../../firebase/rtdbPresence';
 import websocketService from '../../services/websocket';
 import Portal from '../ui/Portal';
 
@@ -142,6 +143,58 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     } catch (e) {
       toast({ title: 'Failed to leave chat', variant: 'destructive' });
     }
+  };
+
+  // Derive a simple, human-friendly type label from filename or mime
+  const getFileTypeLabel = (name, mime) => {
+    const lower = (name || '').toLowerCase();
+    const ext = lower.split('.').pop();
+    if (!ext || ext === lower) {
+      // try mime
+      if (mime) {
+        if (mime.includes('pdf')) return 'PDF Document';
+        if (mime.includes('word') || mime.includes('msword') || mime.includes('officedocument.wordprocessingml')) return 'Word Document';
+        if (mime.includes('excel') || mime.includes('spreadsheet')) return 'Excel Spreadsheet';
+        if (mime.includes('powerpoint') || mime.includes('presentation')) return 'PowerPoint Presentation';
+        if (mime.startsWith('image/')) return 'Image';
+        if (mime.startsWith('video/')) return 'Video';
+        if (mime.startsWith('audio/')) return 'Audio';
+        if (mime.includes('zip') || mime.includes('compressed')) return 'Archive';
+        if (mime.includes('text')) return 'Text Document';
+      }
+      return 'File';
+    }
+
+    const map = {
+      pdf: 'PDF Document',
+      doc: 'Word Document',
+      docx: 'Word Document',
+      xls: 'Excel Spreadsheet',
+      xlsx: 'Excel Spreadsheet',
+      ppt: 'PowerPoint Presentation',
+      pptx: 'PowerPoint Presentation',
+      txt: 'Text Document',
+      md: 'Markdown Document',
+      csv: 'CSV File',
+      png: 'Image',
+      jpg: 'Image',
+      jpeg: 'Image',
+      webp: 'Image',
+      gif: 'Image',
+      svg: 'Image',
+      mp4: 'Video',
+      mov: 'Video',
+      avi: 'Video',
+      mp3: 'Audio',
+      wav: 'Audio',
+      zip: 'Archive',
+      rar: 'Archive',
+      '7z': 'Archive',
+      json: 'JSON File',
+      xml: 'XML File',
+      pdfx: 'PDF Document'
+    };
+    return map[ext] || (mime && mime.split('/')[0] === 'image' ? 'Image' : 'File');
   };
  
   const handleDeleteRoom = async () => {
@@ -466,12 +519,12 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     };
   }, [user?.id]);
 
-  // Subscribe to peer online status for direct chats
+  // Subscribe to peer online status for direct chats (RTDB presence)
   useEffect(() => {
     if (!activeRoom || activeRoom.room_type !== 'direct') return;
     const peer = activeRoom.members?.find(m => m.user.id !== user?.id)?.user;
     if (!peer) return;
-    const unsub = subscribeToOnlineStatus([peer.id], (statuses) => {
+    const unsub = subscribeToPresence([peer.id], (statuses) => {
       setPeerStatus(statuses?.[peer.id]?.isOnline ? 'Online' : 'Offline');
     });
     return () => {
@@ -479,18 +532,39 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     };
   }, [activeRoom, user]);
 
-  // Subscribe to read receipts for own messages currently in view
+  // Subscribe to read receipts for own messages; avoid resetting when loading older
+  const prevRoomIdRef = useRef(null);
   useEffect(() => {
-    // Cleanup previous subscriptions
-    Object.values(readUnsubsRef.current).forEach((fn) => {
-      if (typeof fn === 'function') fn();
-    });
-    readUnsubsRef.current = {};
-    setReadMap({});
+    const roomId = activeRoom?.id || null;
 
-    if (!activeRoom || !messages?.length || !user?.id) return;
+    // If room changed, clear all and resubscribe fresh
+    const roomChanged = prevRoomIdRef.current && prevRoomIdRef.current !== roomId;
+    if (roomChanged) {
+      Object.values(readUnsubsRef.current).forEach((fn) => { if (typeof fn === 'function') fn(); });
+      readUnsubsRef.current = {};
+      setReadMap({});
+    }
+    prevRoomIdRef.current = roomId;
+
+    if (!activeRoom || !Array.isArray(messages) || !user?.id) return;
+
+    // Build a set of current own message IDs
+    const ownIds = new Set(messages.filter(m => String(m.sender_id) === String(user.id)).map(m => m.id));
+
+    // Unsubscribe for messages that are no longer present
+    Object.keys(readUnsubsRef.current).forEach((id) => {
+      if (!ownIds.has(id)) {
+        const fn = readUnsubsRef.current[id];
+        if (typeof fn === 'function') fn();
+        delete readUnsubsRef.current[id];
+        // Do not delete readMap to avoid flicker; leave last known state
+      }
+    });
+
+    // Subscribe for new own messages not yet tracked
     messages.forEach((m) => {
-      if (String(m.sender_id) !== String(user.id)) return; // Only track receipts for own messages
+      if (String(m.sender_id) !== String(user.id)) return;
+      if (readUnsubsRef.current[m.id]) return; // already subscribed
       const unsub = subscribeToReadReceipts(activeRoom.id, m.id, (receipts) => {
         setReadMap((prev) => ({
           ...prev,
@@ -500,13 +574,11 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
       readUnsubsRef.current[m.id] = unsub;
     });
 
+    // Cleanup on unmount or when room truly changes is handled above
     return () => {
-      Object.values(readUnsubsRef.current).forEach((fn) => {
-        if (typeof fn === 'function') fn();
-      });
-      readUnsubsRef.current = {};
+      // no-op here; actual cleanup done when room changes/unmount
     };
-  }, [activeRoom, messages, user]);
+  }, [activeRoom?.id, messages, user?.id]);
 
   const debouncedStopTyping = debounce(() => {
     stopTyping();
@@ -745,10 +817,10 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                     </div>
                     {msg.reply_to.text ? (
                       <div className="opacity-70 truncate">{msg.reply_to.text}</div>
-                    ) : msg.reply_to.file_name ? (
-                      <div className="opacity-70 truncate flex items-center gap-1">
-                        {msg.reply_to.message_type === 'file' && <Paperclip className="h-3 w-3" />}
-                        <span>{msg.reply_to.file_name}</span>
+                    ) : (msg.reply_to.message_type === 'file' && msg.reply_to.file_name) ? (
+                      <div className="opacity-70 flex items-center gap-1 min-w-0">
+                        <Paperclip className="h-3 w-3" />
+                        <span className="inline-block flex-1 w-0 overflow-hidden whitespace-nowrap text-ellipsis" title={msg.reply_to.file_name}>{msg.reply_to.file_name}</span>
                       </div>
                     ) : null}
                   </div>
@@ -759,26 +831,48 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
             {msg.message_type === 'text' ? (
               <p className="whitespace-pre-wrap break-words leading-snug">{linkify(msg.text)}</p>
             ) : msg.message_type === 'image' ? (
-              <div className="max-w-[420px] sm:max-w-[520px]">
+              <div className="w-[260px] sm:w-[300px]">
                 <img
                   src={msg.file_url}
                   alt={msg.file_name}
-                  className="w-auto h-auto max-w-full max-h-[360px] sm:max-h-[420px] object-contain rounded mb-1 cursor-pointer"
+                  className="w-auto h-auto max-w-full max-h-[180px] sm:max-h-[220px] object-cover rounded mb-1 cursor-pointer"
                   onClick={() => setPreviewImg({ url: msg.file_url, name: msg.file_name })}
                 />
-                <div className="flex items-center justify-between">
-                  <p className={`text-xs opacity-70 ${isDark ? 'text-gray-300' : ''}`}>{msg.file_name}</p>
-                  <a href={msg.file_url} target="_blank" rel="noreferrer" className="text-xs underline">Open</a>
-                </div>
+                {/* No filename under images, keep UI clean like WhatsApp. Click image to preview. */}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Paperclip className="h-4 w-4" />
-                <div>
-                  <p className="text-sm">{msg.file_name}</p>
-                  <p className="text-xs opacity-70">{formatBytes(msg.file_size)}</p>
+              <div className={`w-[260px] sm:w-[300px] rounded-xl ${isDark ? 'bg-white/10' : 'bg-gray-100'} overflow-hidden`}> 
+                {/* Header: icon + filename */}
+                <div className="flex items-center gap-2.5 p-2 min-w-0">
+                  <div className={`h-8 w-8 rounded-md flex items-center justify-center ${isDark ? 'bg-white/5' : 'bg-white'}`}>
+                    <Paperclip className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[13px] font-medium overflow-hidden whitespace-nowrap text-ellipsis ${isDark ? 'text-gray-100' : 'text-gray-900'}`} title={msg.file_name}>
+                      {shortenFilename(msg.file_name, 42)}
+                    </p>
+                    <p className={`text-[11px] opacity-70 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{formatBytes(msg.file_size)}{msg.file_name ? `, ${getFileTypeLabel(msg.file_name, msg.file_mime)}` : ''}</p>
+                  </div>
                 </div>
-                <a href={msg.file_url} target="_blank" rel="noreferrer" className="text-xs underline">Download</a>
+
+                {/* Actions */}
+                <div className={`grid grid-cols-2 gap-2 p-2 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+                  <a
+                    href={msg.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`w-full whitespace-nowrap text-center py-1.5 rounded-md text-[13px] font-medium ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-100' : 'bg-white hover:bg-gray-50 text-gray-900'} transition-colors`}
+                  >
+                    Open
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadFile(msg.file_url, msg.file_name || 'file')}
+                    className={`w-full whitespace-nowrap text-center py-1.5 rounded-md text-[13px] font-medium ${isDark ? 'bg-white/5 hover:bg-white/10 text-gray-100' : 'bg-white hover:bg-gray-50 text-gray-900'} transition-colors`}
+                  >
+                    Save as...
+                  </button>
+                </div>
               </div>
             )}
             {/* Timestamp bottom-right inside bubble */}
@@ -823,6 +917,23 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
+  // Shorten very long filenames with a middle ellipsis while preserving extension
+  const shortenFilename = (name, max = 36) => {
+    try {
+      if (!name || typeof name !== 'string') return name || '';
+      if (name.length <= max) return name;
+      const lastDot = name.lastIndexOf('.');
+      const ext = lastDot > 0 && lastDot < name.length - 1 ? name.slice(lastDot) : '';
+      const base = ext ? name.slice(0, lastDot) : name;
+      const keep = Math.max(6, max - ext.length - 3); // 3 for '...'
+      const head = Math.ceil(keep * 0.6);
+      const tail = keep - head;
+      return `${base.slice(0, head)}...${base.slice(base.length - tail)}${ext}`;
+    } catch (_) {
+      return name;
+    }
+  };
+
   const handleDeleteMessage = async (msg) => {
     try {
       await deleteMessageFS(activeRoom.id, msg.id);
@@ -830,6 +941,25 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
       toast({ title: 'Message deleted' });
     } catch (e) {
       toast({ title: 'Delete failed', variant: 'destructive' });
+    }
+  };
+
+  // Robust download that works even when the server doesn't set Content-Disposition
+  const handleDownloadFile = async (fileUrl, fileName = 'download') => {
+    try {
+      const res = await fetch(fileUrl, { credentials: 'omit' });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      // Fallback: open in new tab; user can save from there
+      window.open(fileUrl, '_blank', 'noopener');
     }
   };
 
@@ -864,12 +994,26 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
 
   return (
     <div className={`flex-1 min-h-0 flex flex-col relative ${isDark ? 'bg-[#0f1115] text-gray-100' : 'bg-white text-gray-900'}`}>
-      {/* Chat Header (desktop only) */}
-      <div className={`hidden lg:block p-4 relative ${isDark ? 'bg-[#13151a] border-b border-white/10' : 'bg-white border-b border-gray-200'}`}>
+      {/* Chat Header (now visible on all viewports) */}
+      <div className={`block p-4 relative ${isDark ? 'bg-[#13151a] border-b border-white/10' : 'bg-white border-b border-gray-200'}`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 lg:space-x-3">
+            {/* Mobile-only hamburger to open sidebar */}
+            <button
+              type="button"
+              className={`lg:hidden mr-1 h-8 w-8 lg:h-9 lg:w-9 inline-flex items-center justify-center rounded-md ${isDark ? 'bg-black/30 text-white ring-1 ring-white/10 hover:bg-violet-600 hover:text-white' : 'bg-white/70 text-gray-900 ring-1 ring-gray-200 hover:bg-violet-600 hover:text-white'}`}
+              onClick={(e) => { e.stopPropagation(); try { window.dispatchEvent(new Event('open-sidebar')); } catch(_){} }}
+              aria-label="Open chat list"
+            >
+              {/* Use a generic icon from lucide if Menu isn't imported elsewhere */}
+              <span className="block h-3.5 w-3.5 relative">
+                <span className={`absolute inset-x-0 top-0 h-0.5 ${isDark ? 'bg-current' : 'bg-current'}`}></span>
+                <span className={`absolute inset-x-0 top-1.5 h-0.5 ${isDark ? 'bg-current' : 'bg-current'}`}></span>
+                <span className={`absolute inset-x-0 top-3 h-0.5 ${isDark ? 'bg-current' : 'bg-current'}`}></span>
+              </span>
+            </button>
             <div
-              className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center bg-primary text-white text-sm font-medium cursor-pointer"
+              className="h-9 w-9 lg:h-10 lg:w-10 rounded-full overflow-hidden flex items-center justify-center bg-primary text-white text-sm font-medium cursor-pointer self-center"
               onClick={() => { if (activeRoom.room_type === 'direct') setShowContactInfo(true); else if (activeRoom.room_type === 'group') setShowGroupInfo(true); }}
               role="button"
               tabIndex={0}
@@ -899,14 +1043,14 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               )}
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900">
                 <span className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{roomName}</span>
               </h2>
-              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <div className={`mt-0.5 lg:mt-1 flex items-center gap-1.5 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                 {activeRoom.room_type === 'direct' ? (
                   <>
-                    <span className={`inline-block h-2 w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <span>{peerStatus || 'Direct Message'}</span>
+                    <span className={`inline-block align-middle mt-[1px] h-2 w-2 lg:h-2 lg:w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
+                    <span className="inline-block align-middle leading-[1.1]">{peerStatus || 'Direct Message'}</span>
                     {typingUsers.length > 0 && <span className="italic text-gray-400">typing…</span>}
                   </>
                 ) : (

@@ -228,10 +228,13 @@ export const subscribeToOnlineStatus = (userIds, callback) => {
       const statuses = {};
       idStrings.forEach((key) => {
         const data = latest.get(key) || {};
-        const lastSeenMs = typeof data?.lastSeen?.toMillis === 'function' ? data.lastSeen.toMillis() : 0;
+        const hasLastSeen = typeof data?.lastSeen?.toMillis === 'function';
+        const lastSeenMs = hasLastSeen ? data.lastSeen.toMillis() : 0;
         // Handle clock skew by clamping negative deltas to 0
-        const age = lastSeenMs ? Math.max(0, now - lastSeenMs) : Number.POSITIVE_INFINITY;
-        const fresh = age < TTL_MS;
+        const age = hasLastSeen ? Math.max(0, now - lastSeenMs) : 0;
+        // If lastSeen hasn't resolved yet (immediately after a write with serverTimestamp),
+        // assume freshness when isOnline is true to avoid flashing Offline until next snapshot.
+        const fresh = hasLastSeen ? age < TTL_MS : (data?.isOnline === true);
         const computedOnline = data?.isOnline === true && fresh;
         statuses[key] = {
           ...data,

@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useToast } from '../components/ui/use-toast';
 import { User, Mail, Edit, Save, X, ArrowLeft } from 'lucide-react';
-import { subscribeToOnlineStatus } from '../firebase/firestore';
+import { subscribeToPresence } from '../firebase/rtdbPresence';
 
 const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
@@ -23,17 +23,11 @@ const Profile = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-    const unsub = subscribeToOnlineStatus([user.id], (statuses) => {
+    const unsub = subscribeToPresence([user.id], (statuses) => {
       const st = statuses?.[String(user.id)] || {};
       setSelfOnline(!!st.isOnline);
-      // Firestore Timestamp or Date
       const ls = st.lastSeen;
-      let dt = null;
-      try {
-        if (ls?.toDate) dt = ls.toDate();
-        else if (ls instanceof Date) dt = ls;
-        else if (typeof ls === 'number') dt = new Date(ls);
-      } catch (_) {}
+      const dt = typeof ls === 'number' ? new Date(ls) : (ls instanceof Date ? ls : null);
       setLastSeen(dt);
     });
     return () => { if (typeof unsub === 'function') unsub(); };

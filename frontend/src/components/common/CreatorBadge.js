@@ -14,7 +14,7 @@ const CreatorBadge = ({ isDark = false, username = 'rahulpatel902', avatarPath =
   };
 
   return (
-    <div className="fixed right-4 top-4 z-40 flex items-center select-none">
+    <div className="fixed right-4 bottom-4 z-40 flex items-center select-none">
       {/* Username pill (opens GitHub) */}
       <a
         href={`https://github.com/${username}`}

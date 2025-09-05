@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { formatTime, getInitials } from '../../lib/utils';
 import ProfilePanel from '../profile/ProfilePanel';
-import { subscribeToOnlineStatus } from '../../firebase/firestore';
+import { subscribeToPresence } from '../../firebase/rtdbPresence';
 
 const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,10 +73,10 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
     if (onClose) onClose();
   };
 
-  // Subscribe to current user's presence to avoid stale user.is_online
+  // Subscribe to current user's presence via RTDB for immediate updates
   useEffect(() => {
     if (!user?.id) return;
-    const unsub = subscribeToOnlineStatus([user.id], (statuses) => {
+    const unsub = subscribeToPresence([user.id], (statuses) => {
       const st = statuses?.[String(user.id)];
       setSelfOnline(!!st?.isOnline);
     });
@@ -109,6 +109,13 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [openMenuRoomId]);
+
+  // Allow other components (e.g., welcome screen) to open the New Chat modal
+  useEffect(() => {
+    const openNewChat = () => setShowNewChat(true);
+    window.addEventListener('open-new-chat', openNewChat);
+    return () => window.removeEventListener('open-new-chat', openNewChat);
+  }, []);
 
   const handleNewDirectMessage = async (recipientId) => {
     const result = await createDirectMessage(recipientId);
@@ -257,11 +264,14 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {filteredRooms.length === 0 ? (
-          <div className={`h-full flex flex-col items-center justify-center px-4 text-center transform -translate-y-6 md:-translate-y-10 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className={`h-full flex flex-col items-center justify-center px-4 text-center transform -translate-y-10 md:-translate-y-16 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             <MessageSquare className={`h-12 w-12 mx-auto mb-2 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
             <p className={`${isDark ? 'text-gray-300' : ''}`}>No chats found</p>
             <Button
-              className="mt-2"
+              variant="outline"
+              className={`${isDark
+                ? 'bg-violet-500/10 text-white border-violet-500/40 hover:bg-transparent hover:border-white/30 hover:text-white focus-visible:ring-2 focus-visible:ring-violet-600/40'
+                : 'bg-violet-50 text-violet-700 border-violet-300 hover:bg-violet-100 hover:border-violet-400 hover:text-violet-800 focus-visible:ring-2 focus-visible:ring-violet-500/40'} mt-3 w-full max-w-[240px] mx-auto justify-center transition-colors`}
               onClick={() => setShowNewChat(true)}
             >
               Start a new chat
@@ -478,7 +488,17 @@ const ChatSidebar = ({ onClose, isDark = false, setIsDark }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => { setShowNewChat(false); setNewChatMode('direct'); setSelectedMembers([]); setGroupName(''); setNewUserSearch(''); }}
+                className={`${isDark
+                  ? 'text-gray-300 hover:text-white hover:bg-violet-600 focus-visible:ring-2 focus-visible:ring-violet-600/60'
+                  : 'text-gray-600 hover:text-white hover:bg-violet-600 focus-visible:ring-2 focus-visible:ring-violet-500/60'} rounded-lg`}
+                onClick={() => { 
+                  setShowNewChat(false); 
+                  setNewChatMode('direct'); 
+                  setSelectedMembers([]); 
+                  setGroupName(''); 
+                  setNewUserSearch('');
+                  try { window.dispatchEvent(new Event('new-chat-closed')); } catch {}
+                }}
               >
                 <X className="h-5 w-5" />
               </Button>

@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 // Your Firebase configuration
@@ -11,6 +12,8 @@ const firebaseConfig = {
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "flowchat-final4.firebaseapp.com",
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "flowchat-final4",
   storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "flowchat-final4.appspot.com",
+  // IMPORTANT: Specify RTDB URL so SDK connects to the correct regional instance
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL || undefined,
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "your-sender-id",
   appId: process.env.REACT_APP_FIREBASE_APP_ID || "your-app-id",
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || "your-measurement-id"
@@ -23,6 +26,8 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const auth = getAuth(app);
+// If databaseURL is provided, pass it explicitly to ensure correct region
+export const rtdb = getDatabase(app, process.env.REACT_APP_FIREBASE_DATABASE_URL);
 export const firebaseAuthReady = new Promise((resolve) => {
   const unsub = onAuthStateChanged(auth, () => {
     resolve();

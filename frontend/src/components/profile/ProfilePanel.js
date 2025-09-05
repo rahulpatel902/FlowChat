@@ -6,7 +6,7 @@ import { Input } from '../ui/input';
 import { useToast } from '../ui/use-toast';
 import { X, Edit, Save, Mail, LogOut, Pencil } from 'lucide-react';
 import { uploadProfilePicture, FILE_TYPES, validateFile } from '../../firebase/storage';
-import { subscribeToOnlineStatus } from '../../firebase/firestore';
+import { subscribeToPresence } from '../../firebase/rtdbPresence';
 
 const ProfilePanel = ({ isDark = false, onClose }) => {
   const { user, updateProfile, logout } = useAuth();
@@ -30,10 +30,10 @@ const ProfilePanel = ({ isDark = false, onClose }) => {
     setFormData(initialForm);
   }, [initialForm]);
 
-  // Keep presence in sync using Firestore (avoids stale AuthContext user.is_online)
+  // Keep presence in sync using RTDB (avoids stale AuthContext user.is_online)
   useEffect(() => {
     if (!user?.id) return;
-    const unsub = subscribeToOnlineStatus([user.id], (statuses) => {
+    const unsub = subscribeToPresence([user.id], (statuses) => {
       const st = statuses?.[String(user.id)];
       setSelfOnline(!!st?.isOnline);
     });
