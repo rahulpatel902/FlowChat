@@ -9,22 +9,30 @@ const statusRef = (uid) => ref(rtdb, `status/${uid}`);
 export function startPresence(uid) {
   if (!uid) return () => {};
 
-  // Set the onDisconnect offline write first so it always executes if socket drops
-  try {
-    onDisconnect(statusRef(uid)).set({
-      state: 'offline',
+  // Use connection status to ensure onDisconnect is registered after a connection is established
+  const connectedRef = ref(rtdb, '.info/connected');
+  const unsubscribe = onValue(connectedRef, (snap) => {
+    const isConnected = snap.val() === true;
+    if (!isConnected) return; // wait until we have a connection
+
+    try {
+      onDisconnect(statusRef(uid)).set({
+        state: 'offline',
+        last_changed: serverTimestamp(),
+      });
+    } catch (_) {}
+
+    set(statusRef(uid), {
+      state: 'online',
       last_changed: serverTimestamp(),
-    });
-  } catch (_) {}
+    }).catch(() => {});
+  });
 
-  // Mark online immediately
-  set(statusRef(uid), {
-    state: 'online',
-    last_changed: serverTimestamp(),
-  }).catch(() => {});
-
-  // Return a minimal stop function; the actual stopPresence is a stronger explicit API
-  return () => stopPresence(uid);
+  // Return a stop function that also detaches the connected listener
+  return () => {
+    try { unsubscribe(); } catch (_) {}
+    stopPresence(uid);
+  };
 }
 
 // Explicitly stop presence for a user (e.g., on logout)
