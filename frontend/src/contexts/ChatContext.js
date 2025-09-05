@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { authAPI, chatAPI } from '../services/api';
-import { subscribeToMessages, sendMessage, getLastMessage, updateOnlineStatus } from '../firebase/firestore';
+import { subscribeToMessages, sendMessage, getLastMessage } from '../firebase/firestore';
 import websocketService from '../services/websocket';
 import { useAuth } from './AuthContext';
-import { HEARTBEAT_MS } from '../constants/presence';
 
 const ChatContext = createContext();
 
@@ -138,37 +137,7 @@ export function ChatProvider({ children }) {
     }
   }, [isAuthenticated, loadRooms]);
 
-  // Presence: mark current user online while app is open; offline on unload
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-
-    const goOnline = () => updateOnlineStatus(user.id, true).catch(() => {});
-    const goOffline = () => updateOnlineStatus(user.id, false).catch(() => {});
-
-    // Immediately mark online
-    goOnline();
-
-    // Keep-alive to refresh lastSeen/isOnline
-    const keepAlive = setInterval(goOnline, HEARTBEAT_MS);
-
-    // Immediate refresh when user returns to the tab or focuses the window
-    const onVisibility = () => { if (document.visibilityState === 'visible') goOnline(); };
-    const onFocus = () => goOnline();
-
-    // Mark offline on tab close/refresh
-    window.addEventListener('beforeunload', goOffline);
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('focus', onFocus);
-
-    return () => {
-      clearInterval(keepAlive);
-      // Ensure offline when unmounting provider
-      goOffline();
-      window.removeEventListener('beforeunload', goOffline);
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [isAuthenticated, user?.id]);
+  // (Removed Firestore presence: app now uses RTDB presence exclusively)
 
   // Periodically refresh rooms and on window focus to reflect new activity
   useEffect(() => {

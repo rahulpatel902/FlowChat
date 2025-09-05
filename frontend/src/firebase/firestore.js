@@ -8,13 +8,11 @@ import {
   query, 
   orderBy, 
   limit, 
-  where,
   serverTimestamp,
   getDocs,
   setDoc
 } from 'firebase/firestore';
 import { db, firebaseAuthReady } from './config';
-import { PRESENCE_TTL_MS, RECOMPUTE_INTERVAL_MS } from '../constants/presence';
 
 // Message operations
 export const sendMessage = async (roomId, messageData) => {
@@ -179,94 +177,3 @@ export const subscribeToReadReceipts = (roomId, messageId, callback) => {
   };
 };
 
-// Online status
-export const updateOnlineStatus = async (userId, isOnline) => {
-  try {
-    await firebaseAuthReady;
-    const statusRef = doc(db, 'user_status', userId.toString());
-    // Use setDoc with merge to create if missing and update if exists
-    await setDoc(
-      statusRef,
-      {
-        isOnline,
-        lastSeen: serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (error) {
-    console.error('Error updating online status:', error);
-  }
-};
-
-export const subscribeToOnlineStatus = (userIds, callback) => {
-  const start = async () => {
-    await firebaseAuthReady;
-    const statusRef = collection(db, 'user_status');
-
-    // If no users, emit empty map and return a no-op unsubscribe
-    if (!Array.isArray(userIds) || userIds.length === 0) {
-      callback({});
-      return () => {};
-    }
-
-    // Helper to chunk arrays to Firestore 'in' max of 10
-    const chunk = (arr, size) => {
-      const out = [];
-      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-      return out;
-    };
-
-    const idStrings = userIds.map((id) => id.toString());
-    const chunks = chunk(idStrings, 10);
-
-    // Keep latest snapshot data so we can recompute freshness on a timer
-    const latest = new Map(); // id -> raw data
-
-    const emitComputed = () => {
-      const now = Date.now();
-      const TTL_MS = PRESENCE_TTL_MS; // centralized TTL
-      const statuses = {};
-      idStrings.forEach((key) => {
-        const data = latest.get(key) || {};
-        const hasLastSeen = typeof data?.lastSeen?.toMillis === 'function';
-        const lastSeenMs = hasLastSeen ? data.lastSeen.toMillis() : 0;
-        // Handle clock skew by clamping negative deltas to 0
-        const age = hasLastSeen ? Math.max(0, now - lastSeenMs) : 0;
-        // If lastSeen hasn't resolved yet (immediately after a write with serverTimestamp),
-        // assume freshness when isOnline is true to avoid flashing Offline until next snapshot.
-        const fresh = hasLastSeen ? age < TTL_MS : (data?.isOnline === true);
-        const computedOnline = data?.isOnline === true && fresh;
-        statuses[key] = {
-          ...data,
-          isOnline: computedOnline,
-          lastSeen: data?.lastSeen || null,
-        };
-      });
-      callback(statuses);
-    };
-
-    // Subscribe to each chunk and merge results
-    const unsubs = chunks.map((ids) => {
-      const q = query(statusRef, where('__name__', 'in', ids));
-      return onSnapshot(q, (snapshot) => {
-        snapshot.forEach((doc) => {
-          latest.set(doc.id, doc.data());
-        });
-        emitComputed();
-      });
-    });
-
-    // Periodically recompute so stale users flip to Offline even without new snapshots
-    const intervalId = setInterval(emitComputed, RECOMPUTE_INTERVAL_MS); // every 10s
-
-    return () => {
-      clearInterval(intervalId);
-      unsubs.forEach((u) => { if (typeof u === 'function') u(); });
-    };
-  };
-  const unsub = { current: () => {} };
-  start().then((u) => (unsub.current = u)).catch(console.error);
-  return () => {
-    if (typeof unsub.current === 'function') unsub.current();
-  };
-};
