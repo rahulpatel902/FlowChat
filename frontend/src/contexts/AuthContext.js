@@ -39,9 +39,9 @@ export function AuthProvider({ children }) {
   const presenceStopRef = useRef(null);
 
   // We only want to run the auth bootstrap once on mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkAuthStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthStatus = async () => {
