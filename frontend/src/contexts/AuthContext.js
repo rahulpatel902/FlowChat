@@ -138,7 +138,6 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      const prevUid = state?.user?.id;
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         await authAPI.logout(refreshToken);

@@ -57,10 +57,7 @@ const Chat = () => {
     return () => window.removeEventListener('open-sidebar', openSidebar);
   }, []);
 
-  const peerUser = useMemo(() => {
-    if (!activeRoom || activeRoom.room_type !== 'direct') return null;
-    return activeRoom.members?.find(m => m.user.id !== user?.id)?.user || null;
-  }, [activeRoom, user]);
+  // Removed unused peerUser memo to satisfy eslint in CI
 
   // Compute current member + admin flag for active room
   // Removed unused currentMember/isAdmin to satisfy eslint
