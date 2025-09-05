@@ -6,10 +6,7 @@ import ChatWindow from '../components/chat/ChatWindow';
 import CreatorBadge from '../components/common/CreatorBadge';
 
 import { Button } from '../components/ui/button';
-import { Menu, Search, MoreVertical, MessageSquare, Info, Pencil, Users, Eraser, LogOut, Trash } from 'lucide-react';
-import { Input } from '../components/ui/input';
-import { getInitials } from '../lib/utils';
-import { subscribeToPresence } from '../firebase/rtdbPresence';
+import { Menu, MessageSquare } from 'lucide-react';
 
 const Chat = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -29,13 +26,11 @@ const Chat = () => {
   });
   const { activeRoom, loadRooms } = useChat();
   const { user } = useAuth();
-  const [peerOnline, setPeerOnline] = useState(null); // true | false | null
-  // Mobile-only UI state
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const [mobileSearchTerm, setMobileSearchTerm] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Signal to ChatWindow to clear messages (increment to trigger)
-  const [mobileClearTick, setMobileClearTick] = useState(0);
+  // Mobile-only UI state (trimmed to only what is used)
+  const [showMobileSearch] = useState(false);
+  const [mobileSearchTerm] = useState('');
+  // Signal to ChatWindow to clear messages (static in this page for now)
+  const mobileClearTick = 0;
 
   // Close the sidebar automatically after the New Chat modal is closed, but only
   // when we originally opened it from the welcome screen on small screens.
@@ -68,26 +63,9 @@ const Chat = () => {
   }, [activeRoom, user]);
 
   // Compute current member + admin flag for active room
-  const currentMember = useMemo(() => {
-    if (!activeRoom || activeRoom.room_type !== 'group') return null;
-    return (activeRoom.members || []).find(m => m.user.id === user?.id) || null;
-  }, [activeRoom, user]);
-  const isAdmin = currentMember?.role === 'owner' || currentMember?.role === 'admin';
+  // Removed unused currentMember/isAdmin to satisfy eslint
 
-  useEffect(() => {
-    let unsub = null;
-    if (peerUser?.id) {
-      unsub = subscribeToPresence([peerUser.id], (statuses) => {
-        const s = statuses?.[peerUser.id];
-        setPeerOnline(s?.isOnline === true);
-      });
-    } else {
-      setPeerOnline(null);
-    }
-    return () => {
-      if (typeof unsub === 'function') unsub();
-    };
-  }, [peerUser]);
+  // Removed unused presence listener to satisfy eslint
 
   useEffect(() => {
     loadRooms();

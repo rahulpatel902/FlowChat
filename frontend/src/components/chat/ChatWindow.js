@@ -578,7 +578,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     return () => {
       // no-op here; actual cleanup done when room changes/unmount
     };
-  }, [activeRoom?.id, messages, user?.id]);
+  }, [activeRoom, activeRoom?.id, messages, user?.id]);
 
   const debouncedStopTyping = debounce(() => {
     stopTyping();
