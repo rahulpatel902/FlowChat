@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import * as RTooltip from '@radix-ui/react-tooltip';
 import * as RPopover from '@radix-ui/react-popover';
 import { authAPI, chatAPI } from '../../services/api';
 import data from '@emoji-mart/data';
