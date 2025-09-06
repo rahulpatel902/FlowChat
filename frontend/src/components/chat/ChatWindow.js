@@ -1171,7 +1171,13 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                         </RTooltip.Trigger>
                         {!peerOnline && peerLastSeen && (
                           <RTooltip.Portal>
-                            <RTooltip.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
+                            <RTooltip.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border 
+                              data-[state=open]:animate-in data-[state=closed]:animate-out 
+                              data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 
+                              data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 
+                              data-[side=top]:slide-in-from-bottom-1 data-[side=bottom]:slide-in-from-top-1 
+                              data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 
+                              ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
                               {peerStatusTitle}
                               <RTooltip.Arrow className={isDark ? 'fill-[#111827]' : 'fill-white'} />
                             </RTooltip.Content>
