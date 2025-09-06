@@ -78,6 +78,8 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
   const [peerOnline, setPeerOnline] = useState(false);
   const [peerLastSeen, setPeerLastSeen] = useState(null); // number (ms)
   const lastSeenIntervalRef = useRef(null);
+  // Track per-message image load state to show skeletons
+  const [imageLoaded, setImageLoaded] = useState({}); // { [messageId]: true }
   const [ctxMenu, setCtxMenu] = useState({ open: false, x: 0, y: 0, msg: null });
   const [readsPanel, setReadsPanel] = useState({ open: false, x: 0, y: 0, msg: null, readers: [], nonReaders: [] });
   const emojiAnchorRef = useRef(null);
@@ -943,11 +945,18 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
             {msg.message_type === 'text' ? (
               <p className="whitespace-pre-wrap break-words leading-snug">{linkify(msg.text)}</p>
             ) : msg.message_type === 'image' ? (
-              <div className="w-[260px] sm:w-[300px]">
+              <div className="inline-block max-w-full">
+                {/* Skeleton while loading */}
+                {!imageLoaded[msg.id] && (
+                  <div
+                    className={`rounded mb-1 animate-pulse ${isDark ? 'bg-white/10 border border-white/10' : 'bg-gray-200 border border-gray-200'} w-[75vw] md:w-[420px] lg:w-[520px] h-[180px] sm:h-[220px]`}
+                  />
+                )}
                 <img
                   src={msg.file_url}
                   alt={msg.file_name}
-                  className="w-auto h-auto max-w-full max-h-[180px] sm:max-h-[220px] object-cover rounded mb-1 cursor-pointer"
+                  onLoad={() => setImageLoaded((prev) => ({ ...prev, [msg.id]: true }))}
+                  className={`w-auto h-auto max-w-[75vw] md:max-w-[420px] lg:max-w-[520px] max-h-[60vh] object-contain rounded mb-1 cursor-pointer border ${isDark ? 'border-white/10 shadow-[0_1px_4px_rgba(0,0,0,0.35)]' : 'border-gray-200 shadow'} ${!imageLoaded[msg.id] ? 'hidden' : ''}`}
                   onClick={() => setPreviewImg({ url: msg.file_url, name: msg.file_name })}
                 />
                 {/* No filename under images, keep UI clean like WhatsApp. Click image to preview. */}
