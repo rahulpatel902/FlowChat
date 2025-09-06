@@ -946,17 +946,17 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               <p className="whitespace-pre-wrap break-words leading-snug">{linkify(msg.text)}</p>
             ) : msg.message_type === 'image' ? (
               <div className="inline-block max-w-full">
-                {/* Skeleton while loading */}
+                {/* Skeleton while loading (match file/doc bubble width) */}
                 {!imageLoaded[msg.id] && (
                   <div
-                    className={`rounded mb-1 animate-pulse ${isDark ? 'bg-white/10 border border-white/10' : 'bg-gray-200 border border-gray-200'} w-[75vw] md:w-[420px] lg:w-[520px] h-[180px] sm:h-[220px]`}
+                    className={`rounded mb-1 animate-pulse ${isDark ? 'bg-white/10 border border-white/10' : 'bg-gray-200 border border-gray-200'} w-[260px] sm:w-[300px] h-[180px] sm:h-[220px]`}
                   />
                 )}
                 <img
                   src={msg.file_url}
                   alt={msg.file_name}
                   onLoad={() => setImageLoaded((prev) => ({ ...prev, [msg.id]: true }))}
-                  className={`w-auto h-auto max-w-[75vw] md:max-w-[420px] lg:max-w-[520px] max-h-[60vh] object-contain rounded mb-1 cursor-pointer border ${isDark ? 'border-white/10 shadow-[0_1px_4px_rgba(0,0,0,0.35)]' : 'border-gray-200 shadow'} ${!imageLoaded[msg.id] ? 'hidden' : ''}`}
+                  className={`w-auto h-auto max-w-[260px] sm:max-w-[300px] max-h-[220px] object-contain rounded mb-1 cursor-pointer border ${isDark ? 'border-white/10 shadow-[0_1px_4px_rgba(0,0,0,0.35)]' : 'border-gray-200 shadow'} ${!imageLoaded[msg.id] ? 'hidden' : ''}`}
                   onClick={() => setPreviewImg({ url: msg.file_url, name: msg.file_name })}
                 />
                 {/* No filename under images, keep UI clean like WhatsApp. Click image to preview. */}
