@@ -1208,7 +1208,8 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
           </div>
           
           <div className="flex items-center space-x-1">
-            <Button variant="ghost" size="icon" className={isDark ? 'hover:bg-violet-600 hover:text-white' : ''} onClick={(e) => { e.stopPropagation(); setShowHeaderSearch((s) => !s); setTimeout(() => { try { document.getElementById('chat-header-search')?.focus(); } catch(_){} }, 10); }}>
+            {/* Desktop search button only (mobile via 3-dot menu) */}
+            <Button variant="ghost" size="icon" className={`hidden lg:inline-flex ${isDark ? 'hover:bg-violet-600 hover:text-white' : ''}`} onClick={(e) => { e.stopPropagation(); setShowHeaderSearch((s) => !s); setTimeout(() => { try { document.getElementById('chat-header-search')?.focus(); } catch(_){} }, 10); }}>
               <Search className="h-5 w-5" />
             </Button>
             <div className="relative">
@@ -1217,6 +1218,10 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               </Button>
               {headerMenuOpen && (
                 <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-md py-1 z-20 ${isDark ? 'bg-[#13151a] border border-white/10 text-gray-100' : 'bg-white border border-gray-200'}`} onClick={(e) => e.stopPropagation()}>
+                  {/* Mobile-only: Search messages */}
+                  <button className={`lg:hidden w-full text-left px-3 py-2 text-sm flex items-center ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`} onClick={() => { setHeaderMenuOpen(false); setShowHeaderSearch(true); setTimeout(() => { try { document.getElementById('chat-header-search')?.focus(); } catch(_){} }, 10); }}>
+                    <Search className="h-4 w-4 mr-2" /> Search messages
+                  </button>
                   {activeRoom.room_type === 'direct' && (
                     <button className={`w-full text-left px-3 py-2 text-sm flex items-center ${isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`} onClick={() => { setHeaderMenuOpen(false); setShowContactInfo(true); }}>
                       <Info className="h-4 w-4 mr-2" /> Contact info
