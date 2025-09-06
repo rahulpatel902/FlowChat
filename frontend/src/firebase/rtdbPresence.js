@@ -3,7 +3,7 @@ import { rtdb } from './config';
 
 // Path helper: status/{uid}
 const statusRef = (uid) => ref(rtdb, `status/${uid}`);
-const STALE_MS = 90 * 1000; // consider 'online' stale if not updated within 90s
+// We trust RTDB presence directly. No TTL freshness window is applied.
 
 // Start presence tracking for the given user.
 // Uses onDisconnect to flip to offline immediately if the connection drops.
@@ -63,9 +63,6 @@ export function subscribeToPresence(userIds, callback) {
   }
 
   const unsubs = [];
-  let tick = null; // periodic re-emit timer
-  let offsetUnsub = null; // server time offset listener
-  let serverOffsetMs = 0; // RTDB-reported offset
   const latest = new Map(); // uid -> { state, last_changed }
 
   const emit = () => {
@@ -73,10 +70,8 @@ export function subscribeToPresence(userIds, callback) {
     for (const uid of userIds.map(String)) {
       const data = latest.get(uid);
       const lastSeen = typeof data?.last_changed === 'number' ? data.last_changed : null;
-      // Use server-corrected now to avoid device clock skew
-      const correctedNow = Date.now() + (serverOffsetMs || 0);
-      const fresh = lastSeen ? (correctedNow - lastSeen) < STALE_MS : false;
-      const state = data?.state === 'online' && fresh;
+      // Trust RTDB state directly; onDisconnect() + explicit stopPresence() handle flips
+      const state = data?.state === 'online';
       out[uid] = { isOnline: state, lastSeen };
     }
     callback(out);
@@ -90,33 +85,9 @@ export function subscribeToPresence(userIds, callback) {
     unsubs.push(() => unsubscribe());
   }
 
-  // Periodically re-emit so stale entries naturally flip to offline without requiring a DB write
-  try {
-    tick = setInterval(emit, 30000); // 30s cadence
-  } catch (_) {}
-
-  // Track server time offset to make freshness checks consistent across devices
-  try {
-    const offRef = ref(rtdb, '.info/serverTimeOffset');
-    offsetUnsub = onValue(offRef, (snap) => {
-      const val = snap.val();
-      serverOffsetMs = typeof val === 'number' ? val : 0;
-      // Re-emit when offset changes to immediately correct any status
-      emit();
-    });
-  } catch (_) {}
-
   return () => {
     unsubs.forEach((u) => {
       try { u(); } catch (_) {}
     });
-    if (tick) {
-      try { clearInterval(tick); } catch (_) {}
-      tick = null;
-    }
-    if (offsetUnsub) {
-      try { offsetUnsub(); } catch (_) {}
-      offsetUnsub = null;
-    }
   };
 }
