@@ -1159,33 +1159,13 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900 mb-0 leading-none">
                 <span className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{roomName}</span>
               </h2>
-              <div className={`mt-0 flex items-center gap-1 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <div className={`mt-0.5 lg:mt-0 flex items-center gap-1 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                 {activeRoom.room_type === 'direct' ? (
                   <>
                     <span className={`inline-block align-middle h-2 w-2 lg:h-2 lg:w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <RTooltip.Provider delayDuration={200} skipDelayDuration={0}>
-                      <RTooltip.Root>
-                        <RTooltip.Trigger asChild>
-                          <span className="inline-block align-middle leading-none cursor-default">
-                            {peerStatus || 'Direct Message'}
-                          </span>
-                        </RTooltip.Trigger>
-                        {!peerOnline && peerLastSeen && (
-                          <RTooltip.Portal>
-                            <RTooltip.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border 
-                              data-[state=open]:animate-in data-[state=closed]:animate-out 
-                              data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 
-                              data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 
-                              data-[side=top]:slide-in-from-bottom-1 data-[side=bottom]:slide-in-from-top-1 
-                              data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 
-                              ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
-                              {peerStatusTitle}
-                              <RTooltip.Arrow className={isDark ? 'fill-[#111827]' : 'fill-white'} />
-                            </RTooltip.Content>
-                          </RTooltip.Portal>
-                        )}
-                      </RTooltip.Root>
-                    </RTooltip.Provider>
+                    <span className="inline-block align-middle leading-none cursor-default">
+                      {peerStatus || 'Direct Message'}
+                    </span>
                     {/* Info icon with Popover (mobile-friendly tap) */}
                     {!peerOnline && peerLastSeen && (
                       <RPopover.Root>
@@ -1892,21 +1872,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                   <div className="text-base font-semibold">{peerUser?.full_name || 'User'}</div>
                   <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <span className={`inline-block h-2 w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <RTooltip.Provider delayDuration={200}>
-                      <RTooltip.Root>
-                        <RTooltip.Trigger asChild>
-                          <span className="cursor-default">{peerStatus || 'Offline'}</span>
-                        </RTooltip.Trigger>
-                        {!peerOnline && peerLastSeen && (
-                          <RTooltip.Portal>
-                            <RTooltip.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
-                              {peerStatusTitle}
-                              <RTooltip.Arrow className={isDark ? 'fill-[#111827]' : 'fill-white'} />
-                            </RTooltip.Content>
-                          </RTooltip.Portal>
-                        )}
-                      </RTooltip.Root>
-                    </RTooltip.Provider>
+                    <span className="cursor-default">{peerStatus || 'Offline'}</span>
                   </div>
                 </div>
               </div>
