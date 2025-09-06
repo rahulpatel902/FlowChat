@@ -1180,11 +1180,11 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900 mb-0 leading-none">
                 <span className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{roomName}</span>
               </h2>
-              <div className={`mt-0.5 lg:mt-0 flex items-center gap-1 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <div className={`mt-0.5 lg:mt-0 flex items-center gap-1 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'} flex-1 min-w-0`}>
                 {activeRoom.room_type === 'direct' ? (
                   <>
                     <span className={`inline-block align-middle h-2 w-2 lg:h-2 lg:w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <span className="inline-block align-middle leading-none cursor-default">
+                    <span className="inline-block align-middle leading-none cursor-default truncate min-w-0 max-w-[55vw] sm:max-w-none">
                       {peerStatus || 'Direct Message'}
                     </span>
                     {/* Info icon with Popover (mobile-friendly tap) */}
@@ -1194,7 +1194,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                           <button
                             type="button"
                             aria-label="Show last seen details"
-                            className={`ml-px inline-flex items-center justify-center h-4 w-4 rounded align-middle self-center p-0 ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
+                            className={`ml-px inline-flex items-center justify-center h-4 w-4 rounded align-middle self-center p-0 flex-shrink-0 ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
                           >
                             <Info className="h-3 w-3 opacity-70" />
                           </button>
