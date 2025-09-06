@@ -146,6 +146,21 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     }
   };
 
+  // Simple relative time helper (seconds/minutes/hours/days)
+  const formatRelative = (ts) => {
+    if (!ts) return '';
+    const now = Date.now();
+    const diff = Math.max(0, now - Number(ts));
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m} min${m === 1 ? '' : 's'} ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+    const d = Math.floor(h / 24);
+    return `${d} day${d === 1 ? '' : 's'} ago`;
+  };
+
   // Derive a simple, human-friendly type label from filename or mime
   const getFileTypeLabel = (name, mime) => {
     const lower = (name || '').toLowerCase();
@@ -539,7 +554,8 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
           clearTimeout(peerStatusTimerRef.current);
           peerStatusTimerRef.current = null;
         }
-        setPeerStatus('Offline');
+        const last = st?.lastSeen ? formatRelative(st.lastSeen) : null;
+        setPeerStatus(last ? `Last seen ${last}` : 'Offline');
       }
     });
     return () => {
