@@ -1154,7 +1154,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                 )
               )}
             </div>
-            <div className="self-center">
+            <div className="self-center lg:-mt-0.5">
               <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900 mb-0 leading-none">
                 <span className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{roomName}</span>
               </h2>
@@ -1172,7 +1172,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                           <button
                             type="button"
                             aria-label="Show last seen details"
-                            className={`ml-px inline-flex items-center justify-center h-4 w-4 rounded align-middle ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
+                            className={`ml-px inline-flex items-center justify-center h-4 w-4 rounded align-middle self-center p-0 ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
                           >
                             <Info className="h-3 w-3 opacity-70" />
                           </button>
