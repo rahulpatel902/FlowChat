@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import * as RTooltip from '@radix-ui/react-tooltip';
 import { authAPI, chatAPI } from '../../services/api';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -125,11 +126,10 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     const hh = String(hours).padStart(2, '0');
     return `${day} ${mon} ${year}, ${hh}:${minutes} ${ampm}`;
   };
-  // Absolute tooltip for last seen when offline
+  // Absolute tooltip content for last seen when offline
   const peerStatusTitle = React.useMemo(() => {
-    if (peerOnline) return '';
-    if (!peerLastSeen) return '';
-    return formatDateTime(peerLastSeen);
+    if (peerOnline || !peerLastSeen) return '';
+    return `Last seen on ${formatDateTime(peerLastSeen)}`;
   }, [peerOnline, peerLastSeen]);
  
   // Confirm overlay action handlers (leave/delete), used in JSX overlay
@@ -1162,7 +1162,23 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                 {activeRoom.room_type === 'direct' ? (
                   <>
                     <span className={`inline-block align-middle mt-[1px] h-2 w-2 lg:h-2 lg:w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <span className="inline-block align-middle leading-[1.1]" title={peerStatusTitle || undefined}>{peerStatus || 'Direct Message'}</span>
+                    <RTooltip.Provider delayDuration={200} skipDelayDuration={0}>
+                      <RTooltip.Root>
+                        <RTooltip.Trigger asChild>
+                          <span className="inline-block align-middle leading-[1.1] cursor-default">
+                            {peerStatus || 'Direct Message'}
+                          </span>
+                        </RTooltip.Trigger>
+                        {!peerOnline && peerLastSeen && (
+                          <RTooltip.Portal>
+                            <RTooltip.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
+                              {peerStatusTitle}
+                              <RTooltip.Arrow className={isDark ? 'fill-[#111827]' : 'fill-white'} />
+                            </RTooltip.Content>
+                          </RTooltip.Portal>
+                        )}
+                      </RTooltip.Root>
+                    </RTooltip.Provider>
                     {typingUsers.length > 0 && <span className="italic text-gray-400">typing…</span>}
                   </>
                 ) : (
@@ -1845,7 +1861,21 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                   <div className="text-base font-semibold">{peerUser?.full_name || 'User'}</div>
                   <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <span className={`inline-block h-2 w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <span title={peerStatusTitle || undefined}>{peerStatus || 'Offline'}</span>
+                    <RTooltip.Provider delayDuration={200}>
+                      <RTooltip.Root>
+                        <RTooltip.Trigger asChild>
+                          <span className="cursor-default">{peerStatus || 'Offline'}</span>
+                        </RTooltip.Trigger>
+                        {!peerOnline && peerLastSeen && (
+                          <RTooltip.Portal>
+                            <RTooltip.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
+                              {peerStatusTitle}
+                              <RTooltip.Arrow className={isDark ? 'fill-[#111827]' : 'fill-white'} />
+                            </RTooltip.Content>
+                          </RTooltip.Portal>
+                        )}
+                      </RTooltip.Root>
+                    </RTooltip.Provider>
                   </div>
                 </div>
               </div>
