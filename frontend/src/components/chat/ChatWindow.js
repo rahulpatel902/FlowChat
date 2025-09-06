@@ -93,6 +93,8 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [loadingPeerProfile, setLoadingPeerProfile] = useState(false);
   const [peerProfile, setPeerProfile] = useState(null);
+  // Debounced skeleton for About section to avoid flash of loading on fast responses
+  const [showProfileSkeleton, setShowProfileSkeleton] = useState(false);
   const [showHeaderSearch, setShowHeaderSearch] = useState(false);
   const [messageSearchTerm, setMessageSearchTerm] = useState('');
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -401,6 +403,17 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
       });
     return () => { cancelled = true; };
   }, [showContactInfo, peerUser?.id]);
+
+  // Only show skeleton if loading takes longer than 150ms to avoid flicker
+  useEffect(() => {
+    let t;
+    if (loadingPeerProfile) {
+      t = setTimeout(() => setShowProfileSkeleton(true), 150);
+    } else {
+      setShowProfileSkeleton(false);
+    }
+    return () => { if (t) clearTimeout(t); };
+  }, [loadingPeerProfile]);
 
   const isSameDay = (a, b) => {
     return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -1897,7 +1910,14 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               </div>
               <div className="pt-2">
                 <div className="text-xs uppercase tracking-wide opacity-60 mb-1">About</div>
-                <div className="text-sm">{loadingPeerProfile ? 'Loading…' : (peerProfile?.bio || 'No bio')}</div>
+                {loadingPeerProfile && showProfileSkeleton ? (
+                  <div className="space-y-2">
+                    <div className={`${isDark ? 'bg-white/10' : 'bg-gray-200'} h-3.5 w-40 rounded animate-pulse`} />
+                    <div className={`${isDark ? 'bg-white/10' : 'bg-gray-200'} h-3 w-24 rounded animate-pulse`} />
+                  </div>
+                ) : (
+                  <div className="text-sm">{peerProfile?.bio || 'No bio'}</div>
+                )}
               </div>
               <div className="pt-2">
                 <div className="text-xs uppercase tracking-wide opacity-60 mb-1">Contact</div>
