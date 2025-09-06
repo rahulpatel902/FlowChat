@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as RTooltip from '@radix-ui/react-tooltip';
+import * as RPopover from '@radix-ui/react-popover';
 import { authAPI, chatAPI } from '../../services/api';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -1185,6 +1186,29 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                         )}
                       </RTooltip.Root>
                     </RTooltip.Provider>
+                    {/* Info icon with Popover (mobile-friendly tap) */}
+                    {!peerOnline && peerLastSeen && (
+                      <RPopover.Root>
+                        <RPopover.Trigger asChild>
+                          <button
+                            type="button"
+                            aria-label="Show last seen details"
+                            className={`ml-1 inline-flex items-center justify-center h-5 w-5 rounded ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
+                          >
+                            <Info className="h-3.5 w-3.5 opacity-70" />
+                          </button>
+                        </RPopover.Trigger>
+                        <RPopover.Portal>
+                          <RPopover.Content sideOffset={8} className={`rounded-md px-3 py-2 text-xs lg:text-sm shadow-lg border 
+                            animate-in fade-in-0 zoom-in-95 duration-150 
+                            ${isDark ? 'bg-[#111827] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'}`}>
+                            <div className="font-medium mb-0.5">Presence</div>
+                            <div>{peerStatusTitle}</div>
+                            <RPopover.Arrow className={isDark ? 'fill-[#111827]' : 'fill-white'} />
+                          </RPopover.Content>
+                        </RPopover.Portal>
+                      </RPopover.Root>
+                    )}
                     {typingUsers.length > 0 && <span className="italic text-gray-400">typing…</span>}
                   </>
                 ) : (
