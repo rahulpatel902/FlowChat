@@ -851,10 +851,11 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
 
     // Bubble styling
     const bubbleShadow = isDark ? 'shadow-sm' : 'shadow';
-    const bubbleBase = `px-3 py-2 text-[14px] ${bubbleShadow} relative leading-snug transition-colors`;
+    const bubbleBase = `text-[14px] ${bubbleShadow} relative leading-snug transition-colors`;
     const isMedia = msg.message_type === 'image' || msg.message_type === 'file';
-    // Use unified padding for media bubbles so sender/receiver look the same
-    const bubblePadding = isMedia ? 'pr-3 pb-5' : (isOwn ? 'pr-14 pb-5' : 'pr-10 pb-5');
+    const isImage = msg.message_type === 'image';
+    // No extra padding for image bubbles; keep standard padding for others
+    const bubblePadding = isImage ? 'p-0' : (isMedia ? 'pr-3 pb-5' : (isOwn ? 'pr-14 pb-5' : 'pr-10 pb-5'));
     const ownBubble = `${
       isDark
         ? 'bg-[#5b21b6] text-gray-100 hover:bg-[#6d28d9] active:bg-[#7c3aed]'
@@ -949,14 +950,14 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                 {/* Skeleton while loading */}
                 {!imageLoaded[msg.id] && (
                   <div
-                    className={`rounded mb-1 animate-pulse ${isDark ? 'bg-white/10 border border-white/10' : 'bg-gray-200 border border-gray-200'} w-[75vw] md:w-[420px] lg:w-[520px] h-[180px] sm:h-[220px]`}
+                    className={`rounded animate-pulse ${isDark ? 'bg-white/10 border border-white/10' : 'bg-gray-200 border border-gray-200'} w-[70vw] md:w-[360px] lg:w-[420px] h-[160px] sm:h-[200px]`}
                   />
                 )}
                 <img
                   src={msg.file_url}
                   alt={msg.file_name}
                   onLoad={() => setImageLoaded((prev) => ({ ...prev, [msg.id]: true }))}
-                  className={`w-auto h-auto max-w-[75vw] md:max-w-[420px] lg:max-w-[520px] max-h-[60vh] object-contain rounded mb-1 cursor-pointer border ${isDark ? 'border-white/10 shadow-[0_1px_4px_rgba(0,0,0,0.35)]' : 'border-gray-200 shadow'} ${!imageLoaded[msg.id] ? 'hidden' : ''}`}
+                  className={`block w-auto h-auto max-w-[70vw] md:max-w-[360px] lg:max-w-[420px] max-h-[50vh] object-contain rounded mb-0 cursor-pointer border ${isDark ? 'border-white/10 shadow-[0_1px_4px_rgba(0,0,0,0.35)]' : 'border-gray-200 shadow'} ${!imageLoaded[msg.id] ? 'hidden' : ''}`}
                   onClick={() => setPreviewImg({ url: msg.file_url, name: msg.file_name })}
                 />
                 {/* No filename under images, keep UI clean like WhatsApp. Click image to preview. */}
