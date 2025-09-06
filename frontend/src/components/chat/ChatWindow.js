@@ -125,6 +125,12 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     const hh = String(hours).padStart(2, '0');
     return `${day} ${mon} ${year}, ${hh}:${minutes} ${ampm}`;
   };
+  // Absolute tooltip for last seen when offline
+  const peerStatusTitle = React.useMemo(() => {
+    if (peerOnline) return '';
+    if (!peerLastSeen) return '';
+    return formatDateTime(peerLastSeen);
+  }, [peerOnline, peerLastSeen]);
  
   // Confirm overlay action handlers (leave/delete), used in JSX overlay
   const handleLeaveRoom = async () => {
@@ -1156,7 +1162,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                 {activeRoom.room_type === 'direct' ? (
                   <>
                     <span className={`inline-block align-middle mt-[1px] h-2 w-2 lg:h-2 lg:w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <span className="inline-block align-middle leading-[1.1]">{peerStatus || 'Direct Message'}</span>
+                    <span className="inline-block align-middle leading-[1.1]" title={peerStatusTitle || undefined}>{peerStatus || 'Direct Message'}</span>
                     {typingUsers.length > 0 && <span className="italic text-gray-400">typing…</span>}
                   </>
                 ) : (
@@ -1839,7 +1845,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                   <div className="text-base font-semibold">{peerUser?.full_name || 'User'}</div>
                   <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     <span className={`inline-block h-2 w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
-                    <span>{peerStatus || 'Offline'}</span>
+                    <span title={peerStatusTitle || undefined}>{peerStatus || 'Offline'}</span>
                   </div>
                 </div>
               </div>
