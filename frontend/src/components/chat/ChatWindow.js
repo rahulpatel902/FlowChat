@@ -1846,10 +1846,11 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
         <div className="absolute inset-0 z-[1200] flex items-center justify-center px-4"
              onClick={() => setShowContactInfo(false)}>
           {/* backdrop */}
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-black/40 animate-in fade-in-0 duration-150" />
           {/* panel */}
           <div
-            className={`${isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'} relative w-full max-w-md rounded-xl border shadow-xl p-5`}
+            className={`${isDark ? 'bg-[#13151a] text-gray-100 border-white/10' : 'bg-white text-gray-900 border-gray-200'} relative w-full max-w-md rounded-xl border shadow-xl p-5 
+            animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
