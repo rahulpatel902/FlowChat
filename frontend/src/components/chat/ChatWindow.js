@@ -1156,10 +1156,10 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
               )}
             </div>
             <div>
-              <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900">
+              <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900 mb-0 leading-tight">
                 <span className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{roomName}</span>
               </h2>
-              <div className={`mt-0.5 lg:mt-1 flex items-center gap-1.5 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <div className={`mt-0 flex items-center gap-1.5 text-[13px] lg:text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                 {activeRoom.room_type === 'direct' ? (
                   <>
                     <span className={`inline-block align-middle mt-[1px] h-2 w-2 lg:h-2 lg:w-2 rounded-full ${peerStatus === 'Online' ? 'bg-violet-600' : 'bg-gray-400'}`}></span>
@@ -1193,7 +1193,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                           <button
                             type="button"
                             aria-label="Show last seen details"
-                            className={`ml-1 inline-flex items-center justify-center h-5 w-5 rounded ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
+                            className={`ml-0.5 inline-flex items-center justify-center h-5 w-5 rounded align-middle ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
                           >
                             <Info className="h-3.5 w-3.5 opacity-70" />
                           </button>
