@@ -12,46 +12,46 @@ export function startPresence(uid) {
 
   // Use connection status to ensure onDisconnect is registered after a connection is established
   const connectedRef = ref(rtdb, '.info/connected');
+  // Create a per-tab session key
+  const sessionId = `${Math.random().toString(36).slice(2)}_${Date.now()}`;
+  const sessionRef = ref(rtdb, `status/${uid}/connections/${sessionId}`);
+
   const unsubscribe = onValue(connectedRef, (snap) => {
     const isConnected = snap.val() === true;
     if (!isConnected) return; // wait until we have a connection
 
     try {
-      onDisconnect(statusRef(uid)).set({
-        state: 'offline',
-        last_changed: serverTimestamp(),
-      });
-      if (process.env.NODE_ENV !== 'production') console.info('[presence] onDisconnect registered for', uid);
-    } catch (e) { if (process.env.NODE_ENV !== 'production') console.warn('[presence] onDisconnect failed', e); }
+      // Remove only this tab's session on unexpected disconnect
+      onDisconnect(sessionRef).remove();
+      if (process.env.NODE_ENV !== 'production') console.info('[presence] onDisconnect(remove session) registered', { uid, sessionId });
+    } catch (e) { if (process.env.NODE_ENV !== 'production') console.warn('[presence] onDisconnect registration failed', e); }
 
-    set(statusRef(uid), {
-      state: 'online',
-      last_changed: serverTimestamp(),
+    // Mark this session as connected
+    set(sessionRef, {
+      connected_at: serverTimestamp(),
     }).then(() => {
-      if (process.env.NODE_ENV !== 'production') console.info('[presence] online write OK for', uid);
-    }).catch((e) => { if (process.env.NODE_ENV !== 'production') console.warn('[presence] online write FAILED', e); });
+      if (process.env.NODE_ENV !== 'production') console.info('[presence] session connected', { uid, sessionId });
+    }).catch((e) => { if (process.env.NODE_ENV !== 'production') console.warn('[presence] session connect write FAILED', e); });
+
+    // Optional: update legacy aggregate fields; UI no longer depends on these
+    try { set(ref(rtdb, `status/${uid}/state`), 'online'); } catch (_) {}
+    try { set(ref(rtdb, `status/${uid}/last_changed`), serverTimestamp()); } catch (_) {}
   });
 
   // Return a stop function that also detaches the connected listener
   return () => {
     try { unsubscribe(); } catch (_) {}
-    stopPresence(uid);
+    // Cancel any pending onDisconnect for this session and remove only this session key
+    try { onDisconnect(sessionRef).cancel(); } catch (_) {}
+    try { set(sessionRef, null); } catch (_) {}
   };
 }
 
 // Explicitly stop presence for a user (e.g., on logout)
 export function stopPresence(uid) {
-  if (!uid) return Promise.resolve();
-  try {
-    // Best-effort: ensure any pending onDisconnect won't reapply after explicit offline
-    try { onDisconnect(statusRef(uid)).cancel(); if (process.env.NODE_ENV !== 'production') console.info('[presence] onDisconnect cancelled for', uid); } catch (e) { if (process.env.NODE_ENV !== 'production') console.warn('[presence] onDisconnect cancel failed', e); }
-  } catch (_) {}
-  return set(statusRef(uid), {
-    state: 'offline',
-    last_changed: serverTimestamp(),
-  }).then(() => {
-    if (process.env.NODE_ENV !== 'production') console.info('[presence] offline write OK for', uid);
-  }).catch((e) => { if (process.env.NODE_ENV !== 'production') console.warn('[presence] offline write FAILED', e); });
+  // In the multi-session model, the returned stopper from startPresence() removes this tab's session.
+  // We avoid forcing a global offline state here to not knock other active sessions offline.
+  return Promise.resolve();
 }
 
 // Subscribe to presence for an array of userIds.
@@ -70,8 +70,9 @@ export function subscribeToPresence(userIds, callback) {
     for (const uid of userIds.map(String)) {
       const data = latest.get(uid);
       const lastSeen = typeof data?.last_changed === 'number' ? data.last_changed : null;
-      // Trust RTDB state directly; onDisconnect() + explicit stopPresence() handle flips
-      const state = data?.state === 'online';
+      // Multi-session: online if there is at least one active connection child
+      const connections = data?.connections && typeof data.connections === 'object' ? Object.keys(data.connections) : [];
+      const state = Array.isArray(connections) && connections.length > 0;
       out[uid] = { isOnline: state, lastSeen };
     }
     callback(out);
