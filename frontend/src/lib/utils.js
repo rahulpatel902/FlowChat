@@ -24,16 +24,8 @@ export function formatTime(date) {
 
   if (isNaN(messageDate?.getTime?.())) return '';
 
-  const now = new Date();
-  const diffInHours = (now - messageDate) / (1000 * 60 * 60);
-
-  if (diffInHours < 24) {
-    return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-  } else if (diffInHours < 168) { // 7 days
-    return messageDate.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
-  } else {
-    return messageDate.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-  }
+  // Always show only time (no weekday/date)
+  return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 export function formatFileSize(bytes) {
