@@ -74,6 +74,9 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
   const fileInputRef = useRef(null);
   const [peerStatus, setPeerStatus] = useState(null);
   const peerStatusTimerRef = useRef(null);
+  const [peerOnline, setPeerOnline] = useState(false);
+  const [peerLastSeen, setPeerLastSeen] = useState(null); // number (ms)
+  const lastSeenIntervalRef = useRef(null);
   const [ctxMenu, setCtxMenu] = useState({ open: false, x: 0, y: 0, msg: null });
   const [readsPanel, setReadsPanel] = useState({ open: false, x: 0, y: 0, msg: null, readers: [], nonReaders: [] });
   const emojiAnchorRef = useRef(null);
@@ -182,8 +185,8 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     yesterday.setDate(now.getDate() - 1);
 
     if (diffSec < 60) return 'just now';
-    if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
-    if (diffHour < 24) return `${diffHour} hour${diffHour === 1 ? '' : 's'} ago`;
+    if (diffMin < 60) return `${diffMin} min${diffMin === 1 ? '' : 's'} ago`;
+    if (diffHour < 24) return `${diffHour} hr${diffHour === 1 ? '' : 's'} ago`;
 
     if (sameYMD(dt, yesterday)) {
       return `yesterday at ${timeLabel(dt)}`;
@@ -580,9 +583,14 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     if (!peer) return;
     // Default to offline until first snapshot to avoid stale 'Online'
     setPeerStatus('Offline');
+    setPeerOnline(false);
+    setPeerLastSeen(null);
     const unsub = subscribeToPresence([peer.id], (statuses) => {
       const st = statuses?.[String(peer.id)];
       const nextOnline = !!st?.isOnline;
+      const last = typeof st?.lastSeen === 'number' ? st.lastSeen : null;
+      setPeerOnline(nextOnline);
+      setPeerLastSeen(last);
       // Stabilize: apply Online only after a short delay; Offline immediately
       if (nextOnline) {
         if (peerStatusTimerRef.current) clearTimeout(peerStatusTimerRef.current);
@@ -592,8 +600,8 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
           clearTimeout(peerStatusTimerRef.current);
           peerStatusTimerRef.current = null;
         }
-        const last = st?.lastSeen ? formatLastSeen(st.lastSeen) : null;
-        setPeerStatus(last ? `Last seen ${last}` : 'Offline');
+        const label = last ? formatLastSeen(last) : null;
+        setPeerStatus(label ? `Last seen ${label}` : 'Offline');
       }
     });
     return () => {
@@ -602,8 +610,33 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
         clearTimeout(peerStatusTimerRef.current);
         peerStatusTimerRef.current = null;
       }
+      if (lastSeenIntervalRef.current) {
+        clearInterval(lastSeenIntervalRef.current);
+        lastSeenIntervalRef.current = null;
+      }
     };
   }, [activeRoom, user]);
+
+  // While offline, recompute the relative "Last seen" string every 60 seconds
+  useEffect(() => {
+    // Clear previous interval
+    if (lastSeenIntervalRef.current) {
+      clearInterval(lastSeenIntervalRef.current);
+      lastSeenIntervalRef.current = null;
+    }
+    if (peerOnline || !peerLastSeen) return; // Nothing to update periodically
+    // Immediate refresh
+    setPeerStatus(`Last seen ${formatLastSeen(peerLastSeen)}`);
+    lastSeenIntervalRef.current = setInterval(() => {
+      setPeerStatus(`Last seen ${formatLastSeen(peerLastSeen)}`);
+    }, 60000);
+    return () => {
+      if (lastSeenIntervalRef.current) {
+        clearInterval(lastSeenIntervalRef.current);
+        lastSeenIntervalRef.current = null;
+      }
+    };
+  }, [peerOnline, peerLastSeen]);
 
   // Subscribe to read receipts for own messages; avoid resetting when loading older
   const prevRoomIdRef = useRef(null);
