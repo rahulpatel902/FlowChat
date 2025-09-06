@@ -146,19 +146,57 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
     }
   };
 
-  // Simple relative time helper (seconds/minutes/hours/days)
-  const formatRelative = (ts) => {
+  // Enhanced "last seen" formatter per UX rules
+  const formatLastSeen = (ts) => {
     if (!ts) return '';
-    const now = Date.now();
-    const diff = Math.max(0, now - Number(ts));
-    const s = Math.floor(diff / 1000);
-    if (s < 60) return 'just now';
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m} min${m === 1 ? '' : 's'} ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
-    const d = Math.floor(h / 24);
-    return `${d} day${d === 1 ? '' : 's'} ago`;
+    const ms = Number(ts);
+    if (!Number.isFinite(ms)) return '';
+    const now = new Date();
+    const dt = new Date(ms);
+    if (isNaN(dt.getTime())) return '';
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const timeLabel = (d) => {
+      let h = d.getHours();
+      const m = pad(d.getMinutes());
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12; if (h === 0) h = 12;
+      return `${h}:${m} ${ampm}`;
+    };
+    const dateLabel = (d, withYear = false) => {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const dd = pad(d.getDate());
+      const mon = months[d.getMonth()];
+      return withYear ? `${dd} ${mon} ${d.getFullYear()}` : `${dd} ${mon}`;
+    };
+
+    const diffMs = Math.max(0, now.getTime() - dt.getTime());
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    // Same calendar day helper
+    const sameYMD = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+    if (diffHour < 24) return `${diffHour} hour${diffHour === 1 ? '' : 's'} ago`;
+
+    if (sameYMD(dt, yesterday)) {
+      return `yesterday at ${timeLabel(dt)}`;
+    }
+    if (diffDay >= 2 && diffDay <= 6) {
+      return `${diffDay} days ago at ${timeLabel(dt)}`;
+    }
+
+    const sameYear = now.getFullYear() === dt.getFullYear();
+    if (sameYear) {
+      return `on ${dateLabel(dt, false)} at ${timeLabel(dt)}`;
+    }
+    return `on ${dateLabel(dt, true)} at ${timeLabel(dt)}`;
   };
 
   // Derive a simple, human-friendly type label from filename or mime
@@ -554,7 +592,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
           clearTimeout(peerStatusTimerRef.current);
           peerStatusTimerRef.current = null;
         }
-        const last = st?.lastSeen ? formatRelative(st.lastSeen) : null;
+        const last = st?.lastSeen ? formatLastSeen(st.lastSeen) : null;
         setPeerStatus(last ? `Last seen ${last}` : 'Offline');
       }
     });
