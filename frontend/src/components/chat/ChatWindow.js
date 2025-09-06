@@ -1155,7 +1155,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                 )
               )}
             </div>
-            <div>
+            <div className="flex flex-col justify-center min-h-[36px] lg:min-h-[40px]">
               <h2 className="text-[15px] lg:text-lg font-semibold text-gray-900 mb-0 leading-none">
                 <span className={`${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{roomName}</span>
               </h2>
@@ -1193,7 +1193,7 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
                           <button
                             type="button"
                             aria-label="Show last seen details"
-                            className={`ml-px inline-flex items-center justify-center h-4 w-4 rounded align-middle ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
+                            className={`ml-px inline-flex items-center justify-center h-4 w-4 rounded align-middle lg:hidden ${isDark ? 'hover:bg-white/10' : 'hover:bg-gray-100'} focus:outline-none`}
                           >
                             <Info className="h-3 w-3 opacity-70" />
                           </button>
