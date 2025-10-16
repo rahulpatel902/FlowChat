@@ -11,10 +11,10 @@
 | **Styling** | **Tailwind CSS + shadcn/ui** | Modern, responsive, component-based styling for chat windows, sidebars, and user cards. |
 | **Backend API** | **Django + Django REST Framework (DRF)** | Manages authentication, user profiles, chat room metadata, notifications. Exposes REST APIs for frontend. |
 | **Database (Messages)** | **Firebase Firestore** | Real-time storage and syncing of chat messages across users. |
-| **Database (User Metadata)** | **PostgreSQL** | Stores user accounts, profile info, chat room lists, and additional business logic data. |
+| **Database (User Metadata)** | **PostgreSQL (Neon)** | Stores user accounts, profile info, chat room lists, and additional business logic data. |
 | **Authentication** | **DRF + JWT** (or Django Sessions) | Token-based authentication; integrates with React frontend. |
 | **Version Control** | **Git + GitHub** | Code collaboration, tracking, and CI/CD pipelines. |
-| **Deployment** | **Heroku (Django API)** + **Vercel (React frontend)** | Cloud-hosted backend and frontend for live access. |
+| **Deployment** | **Render (Django API + Redis)** + **Vercel (React frontend)** + **Neon (PostgreSQL)** | Cloud-hosted backend, database, and frontend for live access. |
 
 ---
 
@@ -43,7 +43,8 @@
    - Django only handles metadata (rooms, user links).  
 
 3. **Deployment Flow**  
-   - **Backend (Django + PostgreSQL)** → Deployed to **Heroku**.  
+   - **Backend (Django + Redis)** → Deployed to **Render**.  
+   - **Database (PostgreSQL)** → Deployed to **Neon** (managed Postgres).  
    - **Frontend (React)** → Deployed to **Vercel**.  
    - **Firebase (Firestore + Storage)** → Real-time DB + media hosting.  
 

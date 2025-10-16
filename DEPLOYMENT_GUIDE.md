@@ -2,8 +2,8 @@
 
 ## **Architecture Overview**
 - **Frontend**: Vercel (React app)
-- **Backend**: Render (Django API + PostgreSQL + Redis)
-- **Database**: Render PostgreSQL (free tier)
+- **Backend**: Render (Django API + Redis)
+- **Database**: Neon PostgreSQL (free tier)
 - **Storage**: Firebase (Firestore + Storage)
 
 ---
@@ -31,15 +31,14 @@ cd frontend
 2. Sign up with GitHub account
 3. Connect your GitHub repository
 
-### 2.2 Create PostgreSQL Database
-1. In Render dashboard → "New" → "PostgreSQL"
-2. Name: `flowchat-db`
-3. Database Name: `flowchat`
-4. User: `flowchat_user`
-5. Region: Choose closest to you
-6. Plan: **Free** (0.1 GB storage)
-7. Click "Create Database"
-8. **Save the connection details** (you'll need them)
+### 2.2 Create PostgreSQL Database (Neon)
+1. Go to [neon.tech](https://neon.tech) and create a project.
+2. Choose the region closest to your Render backend (e.g., ap-southeast-1).
+3. Create the default database (e.g., `neondb`).
+4. Open "Connect" and copy a Postgres connection string.
+   - Prefer the **Direct** connection string for migrations.
+   - Ensure it includes `sslmode=require` (Neon requires SSL).
+5. You can later switch to the **Pooled** (PgBouncer) URL for runtime traffic.
 
 ### 2.3 Create Redis Instance
 1. In Render dashboard → "New" → "Redis"
@@ -64,7 +63,7 @@ In your web service settings, add these environment variables:
 ```
 SECRET_KEY=your-generated-secret-key-here
 DEBUG=False
-DATABASE_URL=postgresql://flowchat_user:password@hostname:port/flowchat
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB?sslmode=require
 REDIS_URL=redis://hostname:port
 FIREBASE_PROJECT_ID=your-firebase-project-id
 FIREBASE_PRIVATE_KEY_ID=your-private-key-id
@@ -74,7 +73,7 @@ FIREBASE_CLIENT_ID=your-client-id
 CORS_ALLOWED_ORIGINS=https://your-frontend-url.vercel.app
 ```
 
-**Important**: Get DATABASE_URL and REDIS_URL from your Render database/redis instances.
+**Important**: Get `DATABASE_URL` from Neon (Direct for migrations; you can later switch to Pooled). Get `REDIS_URL` from your Render Redis instance.
 
 ---
 
@@ -215,8 +214,11 @@ python manage.py createsuperuser
 
 ### Render Free Tier
 - **Web Service**: 750 hours/month, sleeps after 15min inactivity
-- **PostgreSQL**: 0.1 GB storage, 1 month data retention
 - **Redis**: 25MB storage
+
+### Neon Free Tier
+- **Compute hours** and **storage** allocations vary; see Neon pricing.
+- Requires SSL (`sslmode=require`). Use Direct for migrations and optionally Pooled for runtime.
 
 ### Vercel Free Tier
 - **Bandwidth**: 100GB/month

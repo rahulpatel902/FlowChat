@@ -14,7 +14,7 @@
 
 FlowChat is a modern real‑time chat application built with a Django backend and a React frontend, using Firebase for realtime messaging and storage.
 
-Live deployments are designed for Vercel (frontend) and Render (backend). See `DEPLOYMENT_GUIDE.md` for step‑by‑step hosting on free tiers.
+Live deployments are designed for Vercel (frontend), Render (backend), and Neon (managed PostgreSQL). See `DEPLOYMENT_GUIDE.md` for step‑by‑step hosting on free tiers.
 
 ---
 
@@ -23,7 +23,7 @@ Live deployments are designed for Vercel (frontend) and Render (backend). See `D
 - Frontend: React (Create React App), TailwindCSS, shadcn/ui, lucide‑react icons
 - Backend: Django 4 + Django REST Framework
 - WebSockets: Django Channels + channels‑redis
-- Primary DB: PostgreSQL (users, rooms, membership, message metadata)
+- Primary DB: PostgreSQL on Neon (users, rooms, membership, message metadata)
 - Realtime Messaging: Firebase Firestore (per‑room collections)
 - Presence (Online/Offline): Firebase Realtime Database (RTDB)
 - File Storage: Firebase Storage (images and files)
@@ -67,7 +67,7 @@ ChatFlow/
 │   │   └── lib/utils.js     # helpers
 │   ├── package.json
 │   └── vercel.json          # Vercel config (CRA)
-├── DEPLOYMENT_GUIDE.md      # Full hosting guide (Render + Vercel)
+├── DEPLOYMENT_GUIDE.md      # Full hosting guide (Render + Vercel + Neon)
 ├── RUN.md, SETUP.md         # Local run/setup notes
 └── .gitignore
 ```
@@ -80,9 +80,10 @@ Both `backend/.env.example` and `frontend/.env.example` are provided. Copy to `.
 
 Backend (`backend/.env`):
 - SECRET_KEY, DEBUG
-- DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+- DATABASE_URL (Neon Postgres URL, include `sslmode=require`)
 - REDIS_URL
 - Firebase service account fields (use env vars; do not commit JSON)
+  - Optional alternative: DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT (only if not using `DATABASE_URL`)
 
 Frontend (`frontend/.env`):
 - REACT_APP_API_URL (e.g., https://your-backend.onrender.com/api)
@@ -94,6 +95,8 @@ Frontend (`frontend/.env`):
 - REACT_APP_FIREBASE_DATABASE_URL (RTDB URL; required for presence)
 - REACT_APP_FIREBASE_MESSAGING_SENDER_ID
 - REACT_APP_FIREBASE_APP_ID
+
+Note: For Neon, prefer the Direct connection string for running `python manage.py migrate`. You can optionally switch `DATABASE_URL` to the Pooled (`-pooler`) URL for runtime.
 
 ---
 
@@ -143,7 +146,7 @@ WebSockets
 ## 🚀 Deployments
 
 - Frontend on Vercel (root: `frontend/`, build: `npm run build`, output: `build/`).
-- Backend on Render (Gunicorn for HTTP; Channels + Redis for websockets).
+- Backend on Render (Gunicorn for HTTP; Channels + Redis for websockets). Database on Neon (PostgreSQL managed service).
 - Detailed steps, env var lists, and rules are in `DEPLOYMENT_GUIDE.md`.
 
 ---
