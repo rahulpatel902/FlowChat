@@ -12,7 +12,7 @@
 
 ---
 
-FlowChat is a modern real‑time chat application built with a Django backend and a React frontend, using Firebase for realtime messaging and storage.
+FlowChat is a modern real‑time chat application built with a Django backend and a React frontend, using Firebase for realtime messaging and Cloudinary for media storage.
 
 Live deployments are designed for Vercel (frontend), Render (backend), and Neon (managed PostgreSQL). See `DEPLOYMENT_GUIDE.md` for step‑by‑step hosting on free tiers.
 
@@ -26,7 +26,7 @@ Live deployments are designed for Vercel (frontend), Render (backend), and Neon 
 - Primary DB: PostgreSQL on Neon (users, rooms, membership, message metadata)
 - Realtime Messaging: Firebase Firestore (per‑room collections)
 - Presence (Online/Offline): Firebase Realtime Database (RTDB)
-- File Storage: Firebase Storage (images and files)
+- Media Storage: Cloudinary (chat images, files, avatars)
 - Auth: JWT (backend) + Firebase custom token for client SDK access
 
 ---
@@ -91,7 +91,6 @@ Frontend (`frontend/.env`):
 - REACT_APP_FIREBASE_API_KEY
 - REACT_APP_FIREBASE_AUTH_DOMAIN
 - REACT_APP_FIREBASE_PROJECT_ID
-- REACT_APP_FIREBASE_STORAGE_BUCKET
 - REACT_APP_FIREBASE_DATABASE_URL (RTDB URL; required for presence)
 - REACT_APP_FIREBASE_MESSAGING_SENDER_ID
 - REACT_APP_FIREBASE_APP_ID

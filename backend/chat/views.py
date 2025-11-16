@@ -8,6 +8,7 @@ from .serializers import (
     ChatRoomSerializer, ChatRoomCreateSerializer, MessageMetadataSerializer,
     DirectMessageCreateSerializer
 )
+import cloudinary.uploader
 
 
 class ChatRoomListView(generics.ListAPIView):
@@ -107,6 +108,119 @@ def create_message_metadata(request, room_id):
             {'error': 'Room not found or access denied'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+# --- Cloudinary upload endpoints ---
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upload_chat_image(request):
+    """Upload a chat image to Cloudinary and return its URL."""
+    file_obj = request.FILES.get('file')
+    room_id = request.data.get('room_id', 'general')
+    if not file_obj:
+        return Response({'detail': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = cloudinary.uploader.upload(
+            file_obj,
+            folder=f"chat_images/{room_id}",
+            resource_type="image",
+        )
+        return Response(
+            {
+                'url': result.get('secure_url') or result.get('url'),
+                'public_id': result.get('public_id'),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    except Exception as e:
+        return Response({'detail': 'Upload failed', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upload_chat_file(request):
+    """Upload a generic chat file (documents, etc.) to Cloudinary and return its URL."""
+    file_obj = request.FILES.get('file')
+    room_id = request.data.get('room_id', 'general')
+    if not file_obj:
+        return Response({'detail': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = cloudinary.uploader.upload(
+            file_obj,
+            folder=f"chat_files/{room_id}",
+            resource_type="auto",
+        )
+        return Response(
+            {
+                'url': result.get('secure_url') or result.get('url'),
+                'public_id': result.get('public_id'),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    except Exception as e:
+        return Response({'detail': 'Upload failed', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upload_profile_picture(request):
+    """Upload the current user's profile picture to Cloudinary and return its URL."""
+    file_obj = request.FILES.get('file')
+    if not file_obj:
+        return Response({'detail': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = cloudinary.uploader.upload(
+            file_obj,
+            folder=f"profile_pictures/{request.user.id}",
+            resource_type="image",
+        )
+        return Response(
+            {
+                'url': result.get('secure_url') or result.get('url'),
+                'public_id': result.get('public_id'),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    except Exception as e:
+        return Response({'detail': 'Upload failed', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def upload_group_avatar(request):
+    """Upload a group chat avatar for a room the user belongs to."""
+    file_obj = request.FILES.get('file')
+    room_id = request.data.get('room_id')
+    if not file_obj or not room_id:
+        return Response({'detail': 'file and room_id are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Ensure the user is a member of the room
+    try:
+        room = ChatRoom.objects.get(id=room_id, members=request.user)
+    except ChatRoom.DoesNotExist:
+        return Response({'detail': 'Room not found or access denied'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        result = cloudinary.uploader.upload(
+            file_obj,
+            folder=f"group_avatars/{room.id}",
+            resource_type="image",
+        )
+        return Response(
+            {
+                'url': result.get('secure_url') or result.get('url'),
+                'public_id': result.get('public_id'),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    except Exception as e:
+        return Response({'detail': 'Upload failed', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['POST'])

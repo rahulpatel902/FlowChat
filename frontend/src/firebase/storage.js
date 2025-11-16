@@ -1,88 +1,46 @@
-import { 
-  ref, 
-  uploadBytesResumable, 
-  getDownloadURL
-} from 'firebase/storage';
-import { storage, firebaseAuthReady } from './config';
+import api from '../services/api';
 
-// Upload file with progress tracking
-export const uploadFile = (file, path, onProgress) => {
-  return new Promise((resolve, reject) => {
-    const start = async () => {
-      // Ensure auth is initialized so Storage gets proper auth headers
-      try { await firebaseAuthReady; } catch (_) {}
-
-      const storageRef = ref(storage, path);
-      const metadata = file?.type ? { contentType: file.type } : undefined;
-      const uploadTask = uploadBytesResumable(storageRef, file, metadata);
-
-      // Watchdog: cancel if no completion within 30s
-      const timeoutMs = 30000;
-      const timeoutId = setTimeout(() => {
-        try { uploadTask.cancel(); } catch (_) {}
-        reject(new Error('Upload timed out. Please check your connection or permissions.'));
-      }, timeoutMs);
-
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          if (onProgress) {
-            onProgress(progress);
-          }
-        },
-        (error) => {
-          clearTimeout(timeoutId);
-          console.error('Upload error:', error);
-          reject(error);
-        },
-        async () => {
-          clearTimeout(timeoutId);
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            resolve({
-              url: downloadURL,
-              path: path,
-              name: file.name,
-              size: file.size,
-              type: file.type
-            });
-          } catch (error) {
-            reject(error);
-          }
-        }
-      );
-    };
-    start().catch(reject);
+// Helper to POST a file to a given upload endpoint with optional extra form fields
+const postFile = async (url, file, extraFields = {}, onProgress) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  Object.entries(extraFields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, value);
+    }
   });
+
+  const response = await api.post(url, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return;
+      const progress = (event.loaded / event.total) * 100;
+      onProgress(progress);
+    },
+  });
+
+  return response.data; // expected shape: { url, public_id }
 };
 
-// Upload image with compression
+// Upload image (chat image)
 export const uploadImage = async (file, roomId, onProgress) => {
-  const timestamp = Date.now();
-  const path = `chat_images/${roomId}/${timestamp}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return postFile('/chat/uploads/chat-image/', file, { room_id: roomId }, onProgress);
 };
 
-// Upload general file
+// Upload general chat file
 export const uploadChatFile = async (file, roomId, onProgress) => {
-  const timestamp = Date.now();
-  const path = `chat_files/${roomId}/${timestamp}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return postFile('/chat/uploads/chat-file/', file, { room_id: roomId }, onProgress);
 };
 
 // Upload profile picture
 export const uploadProfilePicture = async (file, userId, onProgress) => {
-  const timestamp = Date.now();
-  const path = `profile_pictures/${userId}/${timestamp}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  // userId is not strictly needed by backend (it uses current user), but we keep signature the same
+  return postFile('/chat/uploads/profile-picture/', file, {}, onProgress);
 };
 
 // Upload group avatar
 export const uploadGroupAvatar = async (file, roomId, onProgress) => {
-  const timestamp = Date.now();
-  const path = `group_avatars/${roomId}/${timestamp}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return postFile('/chat/uploads/group-avatar/', file, { room_id: roomId }, onProgress);
 };
 
 

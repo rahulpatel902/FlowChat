@@ -24,7 +24,7 @@
 ✅ **User Profiles** – Profile picture, bio, last seen, online status.  
 ✅ **Real-Time Chat** – One-to-one & group chat powered by Firebase Firestore.  
 ✅ **Chat Rooms / Groups** – Created and managed in PostgreSQL, messages linked to Firestore.  
-✅ **Media Sharing** – Send images/files (stored in Firebase Storage).  
+✅ **Media Sharing** – Send images/files (stored in Cloudinary).  
 ✅ **Notifications** – Real-time push (via Firebase Cloud Messaging or WebSocket bridge).  
 ✅ **Search** – Search users, chat history, and groups.  
 ✅ **Read Receipts & Online Status** – Seen/unseen tracking.  
@@ -46,7 +46,6 @@
    - **Backend (Django + Redis)** → Deployed to **Render**.  
    - **Database (PostgreSQL)** → Deployed to **Neon** (managed Postgres).  
    - **Frontend (React)** → Deployed to **Vercel**.  
-   - **Firebase (Firestore + Storage)** → Real-time DB + media hosting.  
+   - **Firebase (Firestore)** → Real-time DB for messages; **Cloudinary** for media hosting.  
 
 ---
-

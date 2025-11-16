@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
@@ -11,6 +10,8 @@ const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "your-api-key-here",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "flowchat-final4.firebaseapp.com",
   projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "flowchat-final4",
+  // storageBucket is no longer used for media (Cloudinary handles files now),
+  // but we keep the field for compatibility with the Firebase project.
   storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "flowchat-final4.appspot.com",
   // IMPORTANT: Specify RTDB URL so SDK connects to the correct regional instance
   databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL || undefined,
@@ -22,9 +23,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
+// Initialize Firebase services (no Storage; media handled by Cloudinary via Django API)
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 export const auth = getAuth(app);
 // If databaseURL is provided, pass it explicitly to ensure correct region
 export const rtdb = getDatabase(app, process.env.REACT_APP_FIREBASE_DATABASE_URL);

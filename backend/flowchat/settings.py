@@ -5,6 +5,8 @@ Django settings for flowchat project.
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import os
+import cloudinary
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -207,6 +209,14 @@ FIREBASE_CONFIG = {
     'token_uri': 'https://oauth2.googleapis.com/token',
 }
 FIREBASE_CREDENTIALS_FILE = config('FIREBASE_CREDENTIALS_FILE', default='')
+
+# Cloudinary configuration for media storage
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    secure=True,
+)
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
