@@ -220,6 +220,7 @@ cloudinary.config(
 
 """Email configuration for sending verification and notification emails."""
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='no-reply@flowchat.local')
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
 
 if DEBUG:
     # During development, print emails to the console instead of sending

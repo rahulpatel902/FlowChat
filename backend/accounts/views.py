@@ -15,8 +15,11 @@ from .serializers import (
     UserProfileSerializer, UserUpdateSerializer, UserListSerializer
 )
 
+import logging
 import firebase_admin
 from firebase_admin import credentials, auth as fb_auth
+
+logger = logging.getLogger(__name__)
 
 if not firebase_admin._apps:
     try:
@@ -53,7 +56,8 @@ class RegisterView(generics.CreateAPIView):
         )
         try:
             send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to send verification email to %s: %s", user.email, e, exc_info=True)
             pass
 
         return Response(
