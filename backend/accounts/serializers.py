@@ -20,6 +20,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         user = User.objects.create_user(**validated_data)
+        user.is_active = False
+        user.save(update_fields=['is_active'])
         return user
 
 
@@ -34,9 +36,9 @@ class UserLoginSerializer(serializers.Serializer):
         if email and password:
             user = authenticate(username=email, password=password)
             if not user:
-                raise serializers.ValidationError('Invalid credentials')
+                raise serializers.ValidationError({'detail': 'Invalid credentials'})
             if not user.is_active:
-                raise serializers.ValidationError('User account is disabled')
+                raise serializers.ValidationError({'detail': 'Please verify your email before logging in.'})
             attrs['user'] = user
         else:
             raise serializers.ValidationError('Must include email and password')

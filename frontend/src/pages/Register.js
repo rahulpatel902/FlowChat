@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -29,6 +29,7 @@ const Register = () => {
   });
   const { register, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Persist theme preference
   useEffect(() => {
@@ -66,9 +67,11 @@ const Register = () => {
     
     if (result.success) {
       toast({
-        title: "Welcome to FlowChat!",
-        description: "Your account has been created successfully.",
+        title: "Check your email",
+        description: result.message || "We have sent a verification link to your email address.",
       });
+      // Redirect to login page after registration
+      navigate('/login');
     } else {
       toast({
         title: "Registration failed",

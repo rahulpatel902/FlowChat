@@ -5,17 +5,19 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.db.models import Q
 from django.conf import settings
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
 from .models import User
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer, 
     UserProfileSerializer, UserUpdateSerializer, UserListSerializer
 )
 
-# Firebase Admin SDK
 import firebase_admin
 from firebase_admin import credentials, auth as fb_auth
 
-# Initialize Firebase Admin using FIREBASE_CONFIG from settings if not already initialized
 if not firebase_admin._apps:
     try:
         if getattr(settings, 'FIREBASE_CREDENTIALS_FILE', ''):
@@ -24,7 +26,6 @@ if not firebase_admin._apps:
             cred = credentials.Certificate(settings.FIREBASE_CONFIG)
         firebase_admin.initialize_app(cred)
     except Exception:
-        # Defer initialization errors to runtime when endpoint is called
         pass
 
 
@@ -37,13 +38,30 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'user': UserProfileSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }, status=status.HTTP_201_CREATED)
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        frontend_base = getattr(settings, 'FRONTEND_URL', '').rstrip('/') or 'http://localhost:3000'
+        verify_url = f"{frontend_base}/verify-email?uid={uid}&token={token}"
+
+        subject = "Verify your email for FlowChat"
+        message = (
+            "Hello,\n\n"
+            "Thank you for registering for FlowChat.\n"
+            f"Please verify your email address by clicking the link below:\n{verify_url}\n\n"
+            "If you did not sign up, you can ignore this email."
+        )
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+        except Exception:
+            pass
+
+        return Response(
+            {
+                'detail': 'Registration successful. Please check your email to verify your account.',
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LoginView(generics.GenericAPIView):
@@ -111,6 +129,30 @@ def firebase_custom_token(request):
         return Response({'custom_token': token}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'detail': 'Failed to create Firebase custom token', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def verify_email(request):
+    uid = request.data.get('uid')
+    token = request.data.get('token')
+    if not uid or not token:
+        return Response({'detail': 'Missing uid or token'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        uid_int = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=uid_int)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return Response({'detail': 'Invalid verification link'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not default_token_generator.check_token(user, token):
+        return Response({'detail': 'Invalid or expired verification token'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+
+    return Response({'detail': 'Email verified successfully. You can now log in.'}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

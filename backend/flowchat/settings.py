@@ -210,13 +210,31 @@ FIREBASE_CONFIG = {
 }
 FIREBASE_CREDENTIALS_FILE = config('FIREBASE_CREDENTIALS_FILE', default='')
 
-# Cloudinary configuration for media storage
+"""Cloudinary configuration for media storage"""
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
     api_key=os.environ.get('CLOUDINARY_API_KEY'),
     api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
     secure=True,
 )
+
+"""Email configuration for sending verification and notification emails."""
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='no-reply@flowchat.local')
+
+if DEBUG:
+    # During development, print emails to the console instead of sending
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # In production, allow overriding the backend via environment variables
+    EMAIL_BACKEND = config(
+        'EMAIL_BACKEND',
+        default='django.core.mail.backends.smtp.EmailBackend',
+    )
+    EMAIL_HOST = config('EMAIL_HOST', default='')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'

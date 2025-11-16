@@ -71,6 +71,7 @@ export const authAPI = {
   lookupUserByUsername: (username) => api.get(`/auth/users/lookup/`, { params: { username } }),
   lookupUserByEmail: (email) => api.get(`/auth/users/lookup/`, { params: { email } }),
   getFirebaseCustomToken: () => api.post('/auth/firebase/custom-token/'),
+  verifyEmail: (uid, token) => api.post('/auth/verify-email/', { uid, token }),
 };
 
 // Chat API

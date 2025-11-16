@@ -123,24 +123,10 @@ export function AuthProvider({ children }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await authAPI.register(userData);
-      const { user, access, refresh } = response.data;
-
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-      
-      dispatch({ type: 'SET_USER', payload: user });
-      // Sign into Firebase using backend-issued custom token after registration
-      try {
-        const { data } = await authAPI.getFirebaseCustomToken();
-        if (data?.custom_token) {
-          await signInWithCustomToken(auth, data.custom_token);
-          // Start RTDB presence immediately after Firebase sign-in
-          if (user?.id) startPresence(user.id);
-        }
-      } catch (e) {
-        console.error('Failed to sign in to Firebase with custom token (register):', e);
-      }
-      return { success: true };
+      const message = response.data?.detail || 'Registration successful. Please check your email to verify your account.';
+      // Do NOT auto-login; email verification is required before first login
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return { success: true, message };
     } catch (error) {
       let message = 'Registration failed';
       if (error.response?.data) {
