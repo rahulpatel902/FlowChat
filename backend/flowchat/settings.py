@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'channels',
+    'anymail',
     
     # Local apps
     'accounts',
@@ -226,16 +227,24 @@ if DEBUG:
     # During development, print emails to the console instead of sending
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
-    # In production, allow overriding the backend via environment variables
-    EMAIL_BACKEND = config(
-        'EMAIL_BACKEND',
-        default='django.core.mail.backends.smtp.EmailBackend',
-    )
-    EMAIL_HOST = config('EMAIL_HOST', default='')
-    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+    # Prefer SendGrid via Anymail if SENDGRID_API_KEY is set
+    SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
+    if SENDGRID_API_KEY:
+        ANYMAIL = {
+            'SENDGRID_API_KEY': SENDGRID_API_KEY,
+        }
+        EMAIL_BACKEND = 'anymail.backends.sendgrid.EmailBackend'
+    else:
+        # Fallback: traditional SMTP backend using environment variables
+        EMAIL_BACKEND = config(
+            'EMAIL_BACKEND',
+            default='django.core.mail.backends.smtp.EmailBackend',
+        )
+        EMAIL_HOST = config('EMAIL_HOST', default='')
+        EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+        EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+        EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+        EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
