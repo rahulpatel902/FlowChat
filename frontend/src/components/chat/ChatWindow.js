@@ -741,7 +741,16 @@ const ChatWindow = ({ isDark: isDarkProp, mobileSearchTerm = '', mobileClearTick
         const uploaded = type === 'image'
           ? await uploadImage(file, activeRoom.id, onProgress)
           : await uploadChatFile(file, activeRoom.id, onProgress);
-        const attachResult = await sendChatMessage('', type, uploaded, replyTo);
+        
+        // Merge original file metadata with upload result
+        const fileData = {
+          ...uploaded,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        };
+
+        const attachResult = await sendChatMessage('', type, fileData, replyTo);
         if (!attachResult?.success) {
           toast({ title: 'Failed to send attachment', description: attachResult?.error || 'Unknown error', variant: 'destructive' });
           setUploading(false);
