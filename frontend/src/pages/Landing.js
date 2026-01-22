@@ -97,7 +97,7 @@ const Landing = () => {
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
           <Link to="/login">
             <Button 
               size="lg" 
